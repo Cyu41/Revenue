@@ -12,7 +12,7 @@ df = pd.read_csv('https://github.com/Cyu41/Revenue/blob/main/data_visualize.csv'
 df['Year'] = df.date.str[0:4]
 df['month'] = df.date.str[5:7]
 
-revenue = pd.read_excel('/Users/yuchun/Downloads/1217_營收.xlsx', sheet_name='RUN1')
+revenue = pd.read_excel('https://github.com/Cyu41/Revenue/blob/main/1217_營收.xlsx', sheet_name='RUN1')
 # predict = pd.read_excel('/Users/yuchun/Downloads/1217_營收.xlsx', sheet_name='RUN2')
 
 stock_info = revenue.iloc[:, 0:3].dropna().rename(
@@ -56,6 +56,7 @@ def get_yoypic(data, yoy, pic_title):
 
 dbc_css = "https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, dbc_css])
+server = app.server
 
 head = html.Div([html.H1('上市櫃產業年度合併報表')],
                 style={'font_size': '600px', 'text_align': 'center'})
