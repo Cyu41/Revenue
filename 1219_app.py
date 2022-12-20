@@ -6,34 +6,9 @@ from plotly.subplots import make_subplots  # 繪製子圖
 from dash import Dash, dcc, html, dash_table, Input, Output, callback, State, callback_context
 import dash_bootstrap_components as dbc
 from dash_bootstrap_templates import ThemeChangerAIO, template_from_url
-import pickle
 
 ########################### 整理資料 ###########################
-# a = pd.read_excel('/Volumes/YUCHUN/2002-2005Rev.xlsx').drop_duplicates(
-#     subset=['以合併為主單月營收(千元)','以合併為主單月營收成長率％','以合併為主單月營收與上月比％'])
-# df = a
-#
-# a = pd.read_excel('/Volumes/YUCHUN/2006-2009Rev.xlsx').drop_duplicates(
-#     subset=['以合併為主單月營收(千元)','以合併為主單月營收成長率％','以合併為主單月營收與上月比％'])
-# df = pd.concat([df, a], axis=0)
-#
-# a = pd.read_excel('/Volumes/YUCHUN/2010-2013Rev.xlsx').drop_duplicates(
-#     subset=['以合併為主單月營收(千元)','以合併為主單月營收成長率％','以合併為主單月營收與上月比％'])
-# df = pd.concat([df, a], axis=0)
-
-#a = pd.read_excel('/Volumes/YUCHUN/2014-2017Rev.xlsx').drop_duplicates(
-#     subset=['以合併為主單月營收(千元)','以合併為主單月營收成長率％','以合併為主單月營收與上月比％'])
-# df = a
-# # df = pd.concat([df, a], axis=0)
-#
-# a = pd.read_excel('/Volumes/YUCHUN/2018-2022Rev.xlsx').drop_duplicates(
-#     subset=['以合併為主單月營收(千元)','以合併為主單月營收成長率％','以合併為主單月營收與上月比％'])
-# df = pd.concat([df, a], axis=0)
-#
-# df = df.rename({'代號':'st_code', '名稱':'st_name', '年月':'date', '營收發布日':'annouce_day',
-#                 '以合併為主單月營收(千元)':'rev', '以合併為主單月營收成長率％':'yoy',
-#                 '以合併為主單月營收與上月比％':'mom'}, axis=1)
-df = pd.read_csv('data_visualize.csv', low_memory=False)
+df = pd.read_csv('https://github.com/Cyu41/Revenue/blob/main/data_visualize.csv', low_memory=False)
 df['Year'] = df.date.str[0:4]
 df['month'] = df.date.str[5:7]
 
