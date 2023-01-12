@@ -22,17 +22,17 @@ update = update[update.annouce_day != 'nan//'].drop('代號 名稱', axis=1)
 
 db = pd.concat([db, update], axis=0).to_csv('db.csv', encoding='utf_8_sig', header=None)
 
-class Auto_push_to_github(object):
-    def get_time(self):
-        return ctime()
-    def create_git_order(self, time, msg):
-        order_arr = ["git add *", "git commit -m" + '"' + 
-                     time +':' + msg + '"' + "git push origin master"]
-        for order in order_arr:
-            system(order)
-    def execute(self, msg):
-        dates = self.get_time()
-        self.create_git_order(dates, msg)
+# class Auto_push_to_github(object):
+#     def get_time(self):
+#         return ctime()
+#     def create_git_order(self, time, msg):
+#         order_arr = ["git add *", "git commit -m" + '"' + 
+#                      time +':' + msg + '"' + "git push origin master"]
+#         for order in order_arr:
+#             system(order)
+#     def execute(self, msg):
+#         dates = self.get_time()
+#         self.create_git_order(dates, msg)
 
-upload = Auto_push_to_github()
-upload.execute('db')
+# upload = Auto_push_to_github()
+# upload.execute('db')
