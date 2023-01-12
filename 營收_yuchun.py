@@ -1,7 +1,7 @@
 import pandas as pd
 from os import system
-from time import ctime
-from Upload_git import *
+from time import ctime, sleep
+from Upload_git import upload
 
 db = pd.read_csv("data_visualize.csv", low_memory=False)
 update = pd.read_excel("2022月營收更新報表_yuchun.xlsx", sheet_name='工作表2', header=6)
@@ -23,8 +23,9 @@ update = update[update.annouce_day != 'nan//'].drop('代號 名稱', axis=1)
 
 db = pd.concat([db, update], axis=0).to_csv('db.csv', encoding='utf_8_sig', header=None)
 
+sleep(3)
 
-upload = Auto_push_to_github()
+# upload = Auto_push_to_github()
 upload.execute('Update_file')
 # class Auto_push_to_github(object):
 #     def get_time(self):
