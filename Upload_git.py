@@ -14,5 +14,5 @@ class Auto_push_to_github(object):
         dates = self.get_time()
         self.create_git_order(dates, msg)
 
-# upload = Auto_push_to_github()
-# upload.execute('Upload_git')
+upload = Auto_push_to_github()
+upload.execute('Upload_git')
