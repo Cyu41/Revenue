@@ -27,7 +27,7 @@ class Auto_push_to_github(object):
         return ctime()
     def create_git_order(self, time, msg):
         order_arr = ["git add *", "git commit -m" + '"' + 
-                     time +':' + msg + '"' + "git push main master"]
+                     time +':' + msg + '"' + "git push origin master"]
         for order in order_arr:
             system(order)
     def execute(self, msg):
