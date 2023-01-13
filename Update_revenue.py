@@ -35,6 +35,7 @@ def job():
     db.to_csv('db.csv', encoding='utf_8_sig', index=None)
 
     upload.execute('Update_file')
+    print('Upload Successfully')
 # upload = Auto_push_to_github()
 
 # class Auto_push_to_github(object):
