@@ -6,6 +6,6 @@ from plotly.subplots import make_subplots  # 繪製子圖
 import numpy as np
 from Upload_git import upload
 
-
+###123j
 upload.execute('Update_file')
 # pd.read_csv('db.csv', low_memory=False)
