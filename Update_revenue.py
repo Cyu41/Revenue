@@ -37,7 +37,7 @@ def Auto_push_file_to_github():
 
     upload.execute('Update_file')
 
-schedule.every(5).seconds.do()
+schedule.every(5).seconds.do(upload.execute('Update_file'))
 time.sleep(3)
 while True:
     schedule.run_pending()
