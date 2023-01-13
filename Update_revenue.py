@@ -35,9 +35,9 @@ def Auto_push_file_to_github():
     db = db[(db.annouce_day.isnull() == False) & (db.new_name.isnull() == False) & (db.rev.isnull() == False)]
     db.to_csv('db.csv', encoding='utf_8_sig', index=None)
 
-upload.execute('Update_file')
+    upload.execute('Update_file')
 
-schedule.every(5).seconds.do(Auto_push_file_to_github)
+schedule.every(5).seconds.do()
 time.sleep(3)
 while True:
     schedule.run_pending()
