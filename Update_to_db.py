@@ -4,7 +4,7 @@ import time
 from time import ctime, sleep
 from Upload_git import upload
 import schedule
-import psycopg2
+# import psycopg2
 
 update = pd.read_excel("2022月營收更新報表_yuchun.xlsx", sheet_name='工作表2', header=6)
 update = update.iloc[:, 3:7]
@@ -26,12 +26,12 @@ update = pd.merge(update, stock_info, on=['st_name','st_code'], how='outer')
 update = update[order]
 
 
-conn = psycopg2.connect(
-    host='database-1.cyn7ldoposru.us-east-1.rds.amazonaws.com',
-    port='5432',
-    user='Yu', 
-    password='m#WA12J#',
-    database="JQC_revenue1"
-)
+# conn = psycopg2.connect(
+#     host='database-1.cyn7ldoposru.us-east-1.rds.amazonaws.com',
+#     port='5432',
+#     user='Yu', 
+#     password='m#WA12J#',
+#     database="JQC_revenue1"
+# )
 
 upload.execute('Update_file')
