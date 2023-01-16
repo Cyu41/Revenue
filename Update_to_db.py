@@ -33,10 +33,8 @@ engine = create_engine(
     'postgresql://{}:{}@{}:{}/{}'.format(
         user, password, host, port, database), echo=True)
 df = pd.read_sql('tej_revenue', engine)
+df.drop_duplicates().dropna()
 
-df.drop_duplicates()
-pd.read_csv('db.csv', low_memory=False)
-.reset_index(inplace=False, drop=True).dtypes
 db = pd.read_csv('db.csv', low_memory=False).reset_index(inplace=False, drop=True)
 db['st_code'] = db['st_code'].astype(str)
 order = db.columns.values.tolist()
@@ -46,18 +44,19 @@ update = update[order]
 
 engine = create_engine(
     'postgresql://{}:{}@{}:{}/{}'.format(user, password, host, port, database), echo=True)
-# db.to_sql('tej_revenue', engine)
+db.to_sql('tej_revenue', engine)
+engine.execute('ALTER TABLE tej_revenue.table ADD PRIMARY KEY (st_code, rev_period);')
 print('connect engine successfully')
 
 update.to_sql('tej_revenue', engine, if_exists='append')
 print('updated to the latest revenue')
 engine.dispose()
     
-schedule.every(5).seconds.do(auto_update_tej_revenue)
-time.sleep(3)
-while True:
-    schedule.run_pending()
-    time.sleep(1)
-sys.exit()
+# schedule.every(5).seconds.do(auto_update_tej_revenue)
+# time.sleep(3)
+# while True:
+#     schedule.run_pending()
+#     time.sleep(1)
+# sys.exit()
 
 upload.execute('Update_file')
