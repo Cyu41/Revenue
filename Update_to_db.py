@@ -53,11 +53,11 @@ update.to_sql('tej_revenue', engine, if_exists='append')
 print('updated to the latest revenue')
 engine.dispose()
     
-schedule.every(5).seconds.do(auto_update_tej_revenue)
-time.sleep(3)
-while True:
-    schedule.run_pending()
-    time.sleep(1)
-sys.exit()
+# schedule.every(1).hours.do(auto_update_tej_revenue)
+# time.sleep(3)
+# while True:
+#     schedule.run_pending()
+#     time.sleep(1)
+
 
 upload.execute('Update_file')
