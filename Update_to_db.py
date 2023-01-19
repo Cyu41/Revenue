@@ -32,8 +32,8 @@ update = update[update.declaration_date != 'nan//'].drop('代號 名稱', axis=1
 engine = create_engine(
     'postgresql://{}:{}@{}:{}/{}'.format(
         user, password, host, port, database), echo=True)
-df = pd.read_sql('tej_revenue', engine)
-df.drop_duplicates().dropna()
+# df = pd.read_sql('tej_revenue', engine)
+# df.drop_duplicates().dropna()
 
 db = pd.read_csv('db.csv', low_memory=False).reset_index(inplace=False, drop=True)
 db['st_code'] = db['st_code'].astype(str)
@@ -41,12 +41,6 @@ order = db.columns.values.tolist()
 stock_info = db.loc[:, ['st_code', 'st_name', 'new_industry_name', 'minor_industry_name']].drop_duplicates(keep='first')
 update = pd.merge(update, stock_info, on=['st_name','st_code'], how='outer')
 update = update[order]
-
-engine = create_engine(
-    'postgresql://{}:{}@{}:{}/{}'.format(user, password, host, port, database), echo=True)
-db.to_sql('tej_revenue', engine)
-engine.execute('ALTER TABLE tej_revenue.table ADD PRIMARY KEY (st_code, rev_period);')
-print('connect engine successfully')
 
 update.to_sql('tej_revenue', engine, if_exists='append')
 print('updated to the latest revenue')
