@@ -61,15 +61,23 @@ year = [2018, 2023]
 
 
 def get_st_mom_yoy(data):
-    data['mom'] = data.rev.diff()/data.rev.shift(1)
     data['Year'] =  data.rev_period.astype(str).str[0:4]
     data['month'] = data.rev_period.astype(str).str[5:7]
+    data['mom'] = data.rev.diff()/data.rev.shift(1)
     def get_yoy(data):
         data = data.sort_values('Year')
         data['yoy'] = data.rev.diff()/data.rev.shift(1)
+        return data
     yoy = pd.DataFrame()
     yoy = data.groupby('month').apply(get_yoy)
     return yoy
+
+def get_latest(data):
+    latest = data.drop_duplicates(subset='st_code', keep='last')
+    # latest = latest.drop('index', axis=1)
+    latest = latest.sort_values('declaration_date', ascending=True)
+    latest = latest.loc[:, ['st_code', 'st_name', 'declaration_date', 'rev', 'mom', 'yoy']]
+    return latest
 
 dropdown1 = new_industry_name[1]
 dropdown2 = '' #minor_industry_name[5] #None
@@ -84,9 +92,7 @@ if st_input is None or st_input == '':
         mask = ("new_industry_name = '" + dropdown1 + "' and " + "minor_industry_name = '" + dropdown2 + "'")
     data = pd.read_sql(st_search, engine)
     data = data.groupby(by='st_code', as_index=False).apply(get_st_mom_yoy)
-    latest = data.drop_duplicates(subset='st_code', keep='last').drop('index', axis=1)
-    latest = latest.loc[:, ['st_code', 'st_name', 'declaration_date', 'rev', 'mom', 'yoy']]
-    latest.columns.values
+    latest = get_latest(data)
     # 轉換成產業總營收
     data = data.groupby(by='rev_period', as_index=False).agg({'rev':'sum'})
 
@@ -99,8 +105,10 @@ else:
         mask = ("new_industry_name = '" + industry + "'")
     print(mask)
     data = pd.read_sql(st_search, engine)     # 產業資料
+    data = data.groupby(by='st_code', as_index=False).apply(get_st_mom_yoy)
+    latest = get_latest(data)
     # 轉換成個股總營收
-    latest = data.drop_duplicates(subset='st_code', keep='last')
+    
     
     
         
