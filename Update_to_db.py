@@ -45,7 +45,7 @@ update = update[order]
 update.to_sql('tej_revenue', engine, if_exists='append')
 print('updated to the latest revenue')
 engine.dispose()
-    
+
 # schedule.every(5).seconds.do(auto_update_tej_revenue)
 # time.sleep(3)
 # while True:

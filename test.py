@@ -6,13 +6,16 @@ from plotly.subplots import make_subplots  # 繪製子圖
 import numpy as np
 from Upload_git import upload
 from os import system
-import time
+# import time
 from time import ctime, sleep
 from Upload_git import upload
-import schedule
-import psycopg2
+# import schedule
+# import psycopg2
 import psycopg2.extras as extras
 from sqlalchemy import create_engine
+import revenue_function as fn
+from dash import Dash, dcc, html, dash_table, Input, Output, callback, State, callback_context
+import dash_bootstrap_components as dbc
 
 """
 connect to db
@@ -29,105 +32,176 @@ engine = create_engine('postgresql://{}:{}@{}:{}/{}'.format(
 stock_info = pd.read_csv('stock_info.csv')
 stock_info.st_code = stock_info.st_code.astype(str)
 
-
-"""
-search in sql
-"""
-mask = ""
-ind_search = """
-select rev_period, sum(rev) as ttl_rev 
-from tej_revenue 
-where {} 
-group by rev_period;
-""".format(mask)
-
-st_search = """
-select st_code, st_name, rev_period, declaration_date, rev
-from tej_revenue 
-where {};
-""".format(mask)
-
-
 """
 callback input & output detail 
 """
 revenue = pd.read_sql('industry', engine)
 new_industry_name = revenue['TSE新產業名.1'].dropna()
 minor_industry_name = revenue['TEJ子產業名.1'].dropna()
-dropdown1 = new_industry_name[2]
-dropdown2 = minor_industry_name[1]
-st_input = '2330'
-year = [2018, 2023]
+
+"""
+layout of app
+"""
+dbc_css = "https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, dbc_css])
+server = app.server
 
 
-def get_st_mom_yoy(data):
-    data['Year'] =  data.rev_period.astype(str).str[0:4]
-    data['month'] = data.rev_period.astype(str).str[5:7]
-    data['mom'] = data.rev.diff()/data.rev.shift(1)
-    def get_yoy(data):
-        data = data.sort_values('Year')
-        data['yoy'] = data.rev.diff()/data.rev.shift(1)
-        return data
-    yoy = pd.DataFrame()
-    yoy = data.groupby('month').apply(get_yoy)
-    return yoy
+# Side panel
+satellite_dropdown = dcc.Dropdown(
+    id='satellite-dropdown-component',
+    options=new_industry_name,
+    clearable=False,
+    value=new_industry_name[0]
+)
 
-def get_latest(data):
-    latest = data.drop_duplicates(subset='st_code', keep='last')
-    # latest = latest.drop('index', axis=1)
-    latest = latest.sort_values('declaration_date', ascending=True)
-    latest = latest.loc[:, ['st_code', 'st_name', 'declaration_date', 'rev', 'mom', 'yoy']]
-    return latest
+satellite_dropdown_text = html.P(
+    id="satellite-dropdown-text", children=[html.Br(), " 上市櫃產業年度合併報表"]
+)
+satellite_title = html.H5(id="satellite-name", children=["選擇 TEJ 產業分類"])
+# satellite_title2 = html.H1(id="satellite-name2", children=["輸入股號或公司名稱查詢"])
 
-dropdown1 = new_industry_name[1]
-dropdown2 = '' #minor_industry_name[5] #None
-st_input = ''
+satellite_body = html.P(
+    className="satellite-description", id="satellite-description", children=[""]
+)
 
-if st_input is None or st_input == '':
-    if dropdown1 is not None and dropdown2 is None or dropdown2 == '':
-        mask = ("new_industry_name = '" + dropdown1 + "'")
-    elif dropdown1 is None and dropdown2 is not None or dropdown1 == '':
-        mask = ("minor_industry_name = '" + dropdown2 + "'")
-    elif dropdown1 is not None and dropdown2 is not None:
-        mask = ("new_industry_name = '" + dropdown1 + "' and " + "minor_industry_name = '" + dropdown2 + "'")
-    data = pd.read_sql(st_search, engine)
-    data = data.groupby(by='st_code', as_index=False).apply(get_st_mom_yoy)
-    latest = get_latest(data)
-    # 轉換成產業總營收
-    data = data.groupby(by='rev_period', as_index=False).agg({'rev':'sum'})
+side_panel_layout = html.Div(
+    id="panel-side",
+    children=[
+        html.Img(src=app.get_asset_url("logo.png"), style={"width":"5rem", "height":"3rem"}),
+        satellite_dropdown_text,
+        html.Div(id="panel-side-text", children=satellite_title),
+        html.Div(id="satellite-dropdown", children=satellite_dropdown),
+        html.H1("輸入股號或公司名稱查詢", style={"font-size": "1rem", "letter-spacing": "0.1rem", "color": "#787878", "text-align": "center"}),
+        html.Div(dcc.Input(placeholder="輸入...", id='st_input', type='text', style={"color":"black", "font-size":"12px", "width":"20rem", "height":"1.5rem"})),
+        html.Br(),
+        html.Div(html.Button("送出查詢",id='submit',n_clicks=0, style={"color":"#fec036","font-size":"15px", "width":"10rem", "height":"2rem"}))
+    ],
+)
 
-else:
-    if (st_input.isdigit() == True):
-        industry = stock_info[stock_info.st_code == st_input].new_industry_name.values[0]
-        mask = ("new_industry_name = '" + industry + "'")
+
+# Root
+root_layout = html.Div(
+    id="root",
+    children=[
+        side_panel_layout,
+    ],
+)
+
+app.layout = root_layout
+
+
+
+@app.callback(
+    [Output('rev_table', 'data'),
+     Output('rank_table', 'data'),
+     Output("graph_rev", "figure"),
+     Output("graph_mom", "figure"),
+     Output("graph_yoy", "figure")],
+    
+    [Input('submit', 'n_clicks'),
+     State("satellite_dropdown", "value"),
+     State("st_input", "value")],
+    prevent_initial_call=True
+) 
+def update_table(submit, dropdown1, st_input):
+    if st_input is None or st_input == '':
+        try:
+            if dropdown1 is not None and dropdown2 is None or dropdown2 == '':
+                mask = ("new_industry_name = '" + dropdown1 + "'")
+                
+            elif dropdown1 is None and dropdown2 is not None or dropdown1 == '':
+                mask = ("minor_industry_name = '" + dropdown2 + "'")
+                
+            elif dropdown1 is not None and dropdown2 is not None:
+                mask = ("new_industry_name = '" + dropdown1 + "' and " + "minor_industry_name = '" + dropdown2 + "'")
+                
+            # 從 db 撈資料
+            st_search = """
+            select st_code, st_name, rev_period, declaration_date, rev
+            from tej_revenue 
+            where {};
+            """.format(mask)
+            
+            data = pd.read_sql(st_search, engine)
+            data = data.groupby(by='st_code', as_index=False).apply(fn.get_st_mom_yoy).reset_index(drop=True, inplace=False)
+
+            # 產業最新營收公布情形
+            latest = fn.get_latest(data)
+            
+            # 產業總營收狀況
+            data = data.groupby(by='rev_period', as_index=False).agg({'rev':'sum'})
+            data = fn.get_st_mom_yoy(data)
+
+            # 預測資料
+            data_predict = fn.predict(data)
+            
+            # 繪圖
+            title = dropdown1 + ' '
+            REV = fn.get_revpic(data, data_predict, (title + ' 各年度月營收'))
+            MOM = fn.get_mompic(data, data_predict, (title + ' 各年度月營收'))
+            YOY = fn.get_yoypic(data, data_predict, (title + ' 各年度月營收'))
+            
+            # 整理營收資訊表
+            table = data.pivot_table(values='rev', index='Year', columns='month').reset_index()
+            data_predict.Year = data_predict.Year + str(' 預估值')
+            table = pd.concat([table, data_predict.tail(12).pivot_table(index='Year', columns='month', values='rev').reset_index()],axis=0)
+
+        except KeyError:
+            print("跳警示通知：該分類沒有相關個股，請重新選擇，並reset")
+            
+            
     else:
-        industry = stock_info[stock_info.st_name == st_input].new_industry_name.values[0]
-        mask = ("new_industry_name = '" + industry + "'")
-    print(mask)
-    data = pd.read_sql(st_search, engine)     # 產業資料
-    data = data.groupby(by='st_code', as_index=False).apply(get_st_mom_yoy)
-    latest = get_latest(data)
-    # 轉換成個股總營收
-    
-    
-    
-        
+        try:
+            if (st_input.isdigit() == True):
+                industry = stock_info[stock_info.st_code == st_input].new_industry_name.values[0]
+                mask = ("new_industry_name = '" + industry + "'")
+                st_mask = 'st_code'
 
-#new_industry_name = 'M1100 水泥工業'
-sql = """select * from tej_revenue where {};""".format(mask)
-pd.read_sql(sql, engine)
-dropdown1
-# ['index', 'st_code', 'st_name', 'rev_period', 'declaration_date',
-#  'rev', 'declaration_year', 'declaration_month', 'new_industry_name', 
-#  'minor_industry_name'] 
+            else:
+                industry = stock_info[stock_info.st_name == st_input].new_industry_name.values[0]
+                mask = ("new_industry_name = '" + industry + "'")
+                st_mask = 'st_name'
 
-# 有字：數字 or 文字
-# 沒字：new_industry_name or minor_industry_name or 兩個都有
-# 
-years = [str(year[0]),str(year[1])]
+            # 從 db 撈資料
+            st_search = """
+            select st_code, st_name, rev_period, declaration_date, rev
+            from tej_revenue 
+            where {}; 
+            """.format(mask)
+            data = pd.read_sql(st_search, engine)
+            data = data.groupby(by='st_code', as_index=False).apply(fn.get_st_mom_yoy).reset_index(drop=True, inplace=False)
+
+            # 產業最新營收公布情形
+            latest = fn.get_latest(data)
+            
+            # 轉換成個股總營收
+            data = data[data[st_mask] == st_input]
+            data = fn.get_st_mom_yoy(data)
+            
+            # 預測資料
+            data_predict = fn.predict(data)
+            
+            # 繪圖
+            title = data.st_code[0] + ' ' + data.st_name[0]
+            REV = fn.get_revpic(data, data_predict, (title + ' 各年度月營收'))
+            MOM = fn.get_mompic(data, data_predict, (title + ' 各年度月營收'))
+            YOY = fn.get_yoypic(data, data_predict, (title + ' 各年度月營收'))   
+            
+            # 整理營收資訊表
+            table = data.pivot_table(values='rev', index='Year', columns='month').reset_index()
+            data_predict.Year = data_predict.Year + str(' 預估值')
+            table = pd.concat([table, data_predict.tail(12).pivot_table(index='Year', columns='month', values='rev').reset_index()],axis=0)
+
+        except IndexError:
+            print('跳警示通知：查無該股票營收，請重新輸入，並reset')
 
 
 
 
-upload.execute('Update_file')
-# pd.read_csv('db.csv', low_memory=False)
+
+
+
+
+if __name__ == '__main__':
+    app.run_server(port=8000, debug=True)

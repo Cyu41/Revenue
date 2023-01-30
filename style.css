@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css?family=Playfair+Display|Roboto');
+
+body {
+    background-color: #F2F2F2;
+    color: #f3f6fa;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 100;
+}
+
+#root {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: stretch;
+}
+
+#interval {
+    display: none;
+}
+
+@media (max-width: 1250px) {
+    #root {
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+}
+
+/**********************************************************************************************************************/
+/*Side panel*/
+/**********************************************************************************************************************/
+#panel-side {
+    padding: 7rem 4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    align-items: flex-start;
+    background-color: #ededed; /*黑色 #faf2f2*/
+    flex: 1 16%;
+}
+
+#satellite-dropdown-text {
+    color: #fec036;   /*橘色 #fec036 粉色#fa4f56*/
+    font-family: "Open Sans", sans-serif;
+    font-size: 1.5rem;
+    font-weight: normal;
+    word-break: normal;
+    margin: 0 0 1rem 0;
+}
+
+.has-value.Select--single > .Select-control .Select-value .Select-value-label,
+.has-value.is-pseudo-focused.Select--single > .Select-control .Select-value .Select-value-label {
+    color: #2b2b2b !important;
+    cursor: pointer;
+    text-align: left;
+}
+
+.Select--single > .Select-control .Select-value, .Select-placeholder {
+    border: 1px solid gray;
+    border-radius: 4px;
+    color: #2b2b2b;
+    background-color: white;
+    cursor: pointer;
+}
+
+#satellite-dropdown:hover, #satellite-dropdown .Select:hover {
+    cursor: pointer;
+}
+
+#satellite-dropdown {
+    width: 100%;
+}
+/*下拉表單選項的背景顏色*/
+.Select-control, .Select-multi-value-wrapper, .Select-menu-outer div {
+    background-color: white;
+}
+/*下拉表單選項的文字顏色*/
+.Select-control, .Select, .Select-value-label, .Select-clear-zone {
+    color: #2b2b2b;
+}
+
+/*下拉表單被游標指到的選項顏色*/
+.Select-menu-outer {
+    background-color: #ffd9d9;
+    border: 1px solid gray !important;
+}
+
+.Select-menu-outer div:hover {
+    background-color: rgba(255, 255, 255, 0.01);
+    cursor: pointer;
+}
+
+.Select-arrow {
+    border-color: gray transparent transparent;
+}
+
+.Select-arrow-zone, .Select-clear-zone, .is-open > .Select-control {
+    background-color: #2b2b2b !important;
+}
+
+#panel-side-text {
+    margin-top: 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    color: white;
+}
+
+#satellite-name {
+    font-family: "Open Sans", sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.1rem;
+    font-weight: normal;
+    color: #787878;
+    text-align: left;
+}
+
+#satellite-dropdown-component {
+    color: #0f0f0f;
+    text-align: center;
+    cursor: pointer;
+}
+
+.satellite-description {
+    font-weight: lighter;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+@media (max-width: 1500px) {
+    #satellite-dropdown-text {
+        font-size: 1.8rem;
+    }
+
+    #satellite-name {
+        font-size: 1rem;
+    }
+
+    #satellite-dropdown-component {
+        font-size: 0.8rem !important;
+    }
+
+    .satellite-description {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 1250px) {
+    #panel-side {
+        padding: 3rem 10rem;
+    }
+}
+
+@media (max-width: 800px) {
+    #panel-side {
+        padding: 3rem 7rem;
+        align-items: center;
+    }
+
+    #satellite-dropdown-text {
+        text-align: center;
+    }
+
+    #panel-side-text {
+        align-items: center;
+    }
+
+    .satellite-description {
+        text-align: center;
+    }
+
+}
+
+@media (max-width: 550px) {
+    #panel-side {
+        padding: 3rem 3rem;
+    }
+}
