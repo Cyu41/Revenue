@@ -23,7 +23,7 @@ def get_latest(data):
     # latest = latest.drop('index', axis=1)
     latest = latest.sort_values('declaration_date', ascending=True)
     latest = latest.loc[:, ['st_code', 'st_name', 'declaration_date', 'rev', 'mom', 'yoy']]
-    return latest#.to_dict('records')
+    return latest.to_dict('records')
 
 def get_mompic(st_data, st_predict, pic_title):
     MOM_pic = []
