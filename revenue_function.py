@@ -16,13 +16,17 @@ def get_st_mom_yoy(data):
     data['mom'] = data.rev.diff()/data.rev.shift(1)
     yoy = pd.DataFrame()
     yoy = data.groupby('month').apply(get_yoy).reset_index(drop=True, inplace=False)
+    yoy = yoy[yoy.Year >= '2017']
     return yoy
 
 def get_latest(data):
     latest = data.drop_duplicates(subset='st_code', keep='last')
     # latest = latest.drop('index', axis=1)
     latest = latest.sort_values('declaration_date', ascending=True)
+    latest['mom'] = round(latest['mom'], 4)
+    latest['yoy'] = round(latest['yoy'], 4)
     latest = latest.loc[:, ['st_code', 'st_name', 'declaration_date', 'rev', 'mom', 'yoy']]
+    latest = latest.set_axis(['公司代碼', '公司簡稱', '最新公告日期', '營收', 'MOM%', 'YOY%'], axis=1)
     return latest.to_dict('records')
 
 def get_mompic(st_data, st_predict, pic_title):
