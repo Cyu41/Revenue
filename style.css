@@ -43,7 +43,7 @@ body {
 
 #satellite-dropdown-text {
     color: #fec036;   /*橘色 #fec036 粉色#fa4f56*/
-    font-family: "Open Sans", =\-ans-serif;
+    font-family: "Open Sans", sans-serif;
     font-size: 1.5rem;
     font-weight: normal;
     word-break: normal;
@@ -101,11 +101,11 @@ body {
     background-color: #2b2b2b !important;
 }
 
-#satellite-dropdown:hover, #satellite-dropdown .Select:hover {
+#new-dropdown:hover, #new-dropdown .Select:hover {
     cursor: pointer;
 }
 
-#satellite-dropdown {
+#new-dropdown {
     width: 100%;
 }
 /*下拉表單選項的背景顏色*/
@@ -144,7 +144,7 @@ body {
     color: white;
 }
 
-#satellite-name {
+#new-name {
     font-family: "Open Sans", sans-serif;
     font-size: 1.2rem;
     letter-spacing: 0.1rem;
@@ -153,7 +153,7 @@ body {
     text-align: left;
 }
 
-#satellite-dropdown-component {
+#new-dropdown-component {
     color: #0f0f0f;
     text-align: center;
     cursor: pointer;
@@ -185,11 +185,11 @@ body {
         font-size: 1.8rem;
     }
 
-    #satellite-name {
+    #new-name {
         font-size: 1rem;
     }
 
-    #satellite-dropdown-component {
+    #new-dropdown-component {
         font-size: 0.8rem !important;
     }
 
