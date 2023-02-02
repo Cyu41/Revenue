@@ -17,6 +17,7 @@ database="JQC_Revenue1"
 
 # def auto_update_tej_revenue():
 update = pd.read_excel("2022月營收更新報表_yuchun.xlsm", sheet_name='工作表2', header=6)
+update = pd.read_excel('月營收.xlsx')
 update = update.iloc[:, 3:7]
 update = update.rename({'【1】年月':'rev_period', '【2】營收發布日':'declaration_date', '【3】單月營收(千元)':'rev'}, axis=1)
 update['st_code'] = update['代號 名稱'].astype(str).str[0:4]
@@ -32,11 +33,9 @@ update = update[update.declaration_date != 'nan//'].drop('代號 名稱', axis=1
 engine = create_engine(
     'postgresql://{}:{}@{}:{}/{}'.format(
         user, password, host, port, database), echo=True)
-df = pd.read_sql('tej_revenue', engine)
+# df = pd.read_sql('tej_revenue', engine)
+# df.drop_duplicates().dropna()
 
-df.drop_duplicates()
-pd.read_csv('db.csv', low_memory=False)
-.reset_index(inplace=False, drop=True).dtypes
 db = pd.read_csv('db.csv', low_memory=False).reset_index(inplace=False, drop=True)
 db['st_code'] = db['st_code'].astype(str)
 order = db.columns.values.tolist()
@@ -44,20 +43,19 @@ stock_info = db.loc[:, ['st_code', 'st_name', 'new_industry_name', 'minor_indust
 update = pd.merge(update, stock_info, on=['st_name','st_code'], how='outer')
 update = update[order]
 
-engine = create_engine(
-    'postgresql://{}:{}@{}:{}/{}'.format(user, password, host, port, database), echo=True)
-# db.to_sql('tej_revenue', engine)
-print('connect engine successfully')
+pd.merge(update, db, how='outer')
+db
+update.isin(db)
 
 update.to_sql('tej_revenue', engine, if_exists='append')
-print('updated to the latest revenue')
+print(ctime(), 'updated to the latest revenue')
 engine.dispose()
-    
-# schedule.every(1).hours.do(auto_update_tej_revenue)
+
+# schedule.every(5).seconds.do(auto_update_tej_revenue)
 # time.sleep(3)
 # while True:
 #     schedule.run_pending()
 #     time.sleep(1)
-
+# sys.exit()
 
 upload.execute('Update_file')
