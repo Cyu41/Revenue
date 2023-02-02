@@ -56,7 +56,7 @@ header = html.Div(
         html.Br(),
         html.Img(src=app.get_asset_url("logo.png"), style={"width":"5rem", "height":"3rem"}),
         html.Br(),
-        html.H3(id='header', children=["雋寬資訊"], style={'color':'black'})
+        html.H3(id='header', children=["小飛鷹"], style={'color':'black'})
     ],style={"padding": "2rem 2rem"}
 )
 
