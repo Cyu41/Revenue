@@ -42,7 +42,6 @@ def get_mompic(st_data, st_predict, pic_title):
     MOM = go.Figure(data = MOM_pic, layout=layout)
     return MOM
 
-
 def get_yoypic(st_yoy, st_predict, pic_title):
     YOY_pic = []
     for i in st_yoy.Year.drop_duplicates():
@@ -70,20 +69,16 @@ def get_revpic(st_data, st_predict, title_name):
     REV = go.Figure(data = REV_pic, layout=layout)
     return REV
 
-
 weight = [1, 1, 1, 3, 5]
-
 
 def get_ratio(data):
     data['ratio'] = round(data.rev/data.rev.sum(), 4)
     return data
 
-
 def get_avg_ratio(data):
     roll_num = len(weight)
     data = data.sort_values('Year').reset_index(drop=True, inplace=False).tail(roll_num + 1).head(roll_num)  # 抓到最後一年的前 n 年，n 隨權重年份個變
     return round(np.average(data.ratio, weights = weight), 4)
-
 
 def predict(data):
     a = data.groupby('Year', as_index=False).apply(get_ratio)
@@ -97,4 +92,3 @@ def predict(data):
     predict['mom'] = predict.rev.diff() / predict.rev.shift(1)
     predict = predict.groupby('month', as_index=False).apply(get_yoy).sort_values(['Year', 'month'])
     return predict.tail(13)
-

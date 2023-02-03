@@ -34,9 +34,7 @@ database="JQC_Revenue1"
 engine = create_engine(
     'postgresql://{}:{}@{}:{}/{}'.format(
         user, password, host, port, database), echo=True)
-# conn_string = "host='database-1.cyn7ldoposru.us-east-1.rds.amazonaws.com' dbname='JQC_Revenue1' user='Yu' password='m#WA12J#'"
-# conn = psycopg2.connect(conn_string)
-# cur = conn.cursor()
+
 
 db = pd.read_csv('db.csv', low_memory=False).reset_index(inplace=False, drop=True)
 db['st_code'] = db['st_code'].astype(str)
