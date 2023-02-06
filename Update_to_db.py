@@ -23,6 +23,9 @@ update['rev_period'] = update['rev_period'].astype(str).str[0:4] + "/" + update[
 update['declaration_date'] = update['declaration_date'].str[0:4] + "/" + update['declaration_date'].str[4:6] + "/" + update['declaration_date'].str[6:8]
 update = update[update.declaration_date != 'nan//'].drop('代號 名稱', axis=1)
 
+latest = update.sort_values('declaration_date').declaration_date.drop_duplicates().tail(1).values[0]
+update = update[update.declaration_date == latest]
+
 # write a df to a PostgreSQL database
 host='database-1.cyn7ldoposru.us-east-1.rds.amazonaws.com'
 port='5432'
