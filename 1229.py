@@ -242,6 +242,7 @@ def update_latest(df):
     data = data.sort_values('rev_period', ascending=True)
     return data.tail(1)
 
+
 latest_search = """
 select *
 from tej_revenue
