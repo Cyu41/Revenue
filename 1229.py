@@ -135,9 +135,9 @@ rank = html.Div([
             id='rank_table',
             columns=[{"name": i, "id": i, "deletable": True} for i in (rank_col)],
             page_current=0,
-            page_size=10,
+            page_size=5,
             page_action='custom',
-            sort_action='custom',
+            sort_action='native',
             sort_mode='single',
             sort_by=[],
             style_cell={
@@ -246,11 +246,10 @@ select *
 from tej_revenue
 where rev_period = (select MAX(rev_period) from tej_revenue);
 """
-
 df = pd.read_sql(latest_search, engine)
 
 latest_df = df.groupby('st_code', as_index=False).apply(update_latest)
-latest_df = latest_df.drop(['Year','month'], axis=1)
+latest_df = latest_df.drop(['Year','month'], axis=1).sort_values('rev_period', ascending=False)
 latest_df = latest_df.set_axis(['公司代碼', '公司簡稱', '年月', '最新公告日期', '營收', 'MOM%', 'YOY%'], axis=1)
 
 latest_rev_col = ['公司代碼', '公司簡稱', '年月', '最新公告日期', '營收', 'MOM%', 'YOY%']
