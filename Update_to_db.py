@@ -7,6 +7,14 @@ import schedule
 import psycopg2
 import psycopg2.extras as extras
 from sqlalchemy import create_engine
+import sqlalchemy
+from sqlalchemy.dialects.mysql import insert
+
+
+def insert_on_duplicate(table, conn, keys, data_iter):
+    insert_stmt = insert(table.table).values(list(data_iter))
+    on_duplicate_key_stmt = insert_stmt.on_duplicate_key_update(insert_stmt.inserted)
+    conn.execute(on_duplicate_key_stmt)
 
 
 # def auto_update_tej_revenue():
@@ -22,8 +30,8 @@ update['rev_period'] = update['rev_period'].astype(str).str[0:4] + "/" + update[
 update['declaration_date'] = update['declaration_date'].str[0:4] + "/" + update['declaration_date'].str[4:6] + "/" + update['declaration_date'].str[6:8]
 update = update[update.declaration_date != 'nan//'].drop('代號 名稱', axis=1)
 
-latest = update.sort_values('declaration_date').declaration_date.drop_duplicates().tail(1).values[0]
-update = update[update.declaration_date == latest]
+# latest = update.sort_values('declaration_date').declaration_date.drop_duplicates().tail(1).values[0]
+# update = update[update.declaration_date == latest]
 
 # write a df to a PostgreSQL database
 host='database-1.cyn7ldoposru.us-east-1.rds.amazonaws.com'
@@ -44,7 +52,16 @@ order = db.columns.values.tolist()
 stock_info = db.loc[:, ['st_code', 'st_name', 'new_industry_name', 'minor_industry_name']].drop_duplicates(keep='first')
 update = pd.merge(update, stock_info, on=['st_name','st_code'], how='inner')
 update = update[order]
-update.to_sql('tej_revenue', con=engine, if_exists='append')
+# update.to_sql('tej_revenue', con=engine, if_exists='append')
+
+for i in range(len(update)):
+    try:
+        update.iloc[i:i+1].to_sql('tej_revenue', con=engine, if_exists='append')
+    except sqlalchemy.exc.IntegrityError: 
+        pass #or any other action
+
+# update.to_sql('tej_revenue', con=engine, if_exists='append', method=insert_on_duplicate)
+
 print(ctime(), 'updated to the latest revenue')
 # engine.dispose()
 
