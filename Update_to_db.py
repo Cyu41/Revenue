@@ -8,12 +8,16 @@ import psycopg2
 import psycopg2.extras as extras
 from sqlalchemy import create_engine
 import sqlalchemy
-from sqlalchemy.dialects.mysql import insert
+from sqlalchemy.dialects.postgresql import insert
 
 
 def insert_on_duplicate(table, conn, keys, data_iter):
+    print(list(data_iter))
     insert_stmt = insert(table.table).values(list(data_iter))
-    on_duplicate_key_stmt = insert_stmt.on_duplicate_key_update(insert_stmt.inserted)
+    on_duplicate_key_stmt = insert_stmt.on_conflict_do_nothing(
+        constraint='tej_revenue_pk'
+    )
+    print(on_duplicate_key_stmt)
     conn.execute(on_duplicate_key_stmt)
 
 
@@ -30,8 +34,8 @@ update['rev_period'] = update['rev_period'].astype(str).str[0:4] + "/" + update[
 update['declaration_date'] = update['declaration_date'].str[0:4] + "/" + update['declaration_date'].str[4:6] + "/" + update['declaration_date'].str[6:8]
 update = update[update.declaration_date != 'nan//'].drop('代號 名稱', axis=1)
 
-# latest = update.sort_values('declaration_date').declaration_date.drop_duplicates().tail(1).values[0]
-# update = update[update.declaration_date == latest]
+latest = update.sort_values('declaration_date').declaration_date.drop_duplicates().tail(1).values[0]
+update = update[update.declaration_date == latest]
 
 # write a df to a PostgreSQL database
 host='database-1.cyn7ldoposru.us-east-1.rds.amazonaws.com'
@@ -60,7 +64,7 @@ for i in range(len(update)):
     except sqlalchemy.exc.IntegrityError: 
         pass #or any other action
 
-# update.to_sql('tej_revenue', con=engine, if_exists='append', method=insert_on_duplicate)
+# update.to_sql('tej_revenue', con=engine.connect(), if_exists='append', method=insert_on_duplicate)
 
 print(ctime(), 'updated to the latest revenue')
 # engine.dispose()
