@@ -56,7 +56,8 @@ order = db.columns.values.tolist()
 stock_info = db.loc[:, ['st_code', 'st_name', 'new_industry_name', 'minor_industry_name']].drop_duplicates(keep='first')
 update = pd.merge(update, stock_info, on=['st_name','st_code'], how='inner')
 update = update[order]
-# update.to_sql('tej_revenue', con=engine, if_exists='append')
+update.to_sql('tej_revenue', con=engine, if_exists='append')
+
 
 for i in range(len(update)):
     try:
