@@ -11,12 +11,12 @@ def get_yoy(data):
     return data
 
 def get_st_mom_yoy(data):
+    data['rev'] = round(data['rev']/1000, 1)
     data['Year'] =  data.rev_period.astype(str).str[0:4]
     data['month'] = data.rev_period.astype(str).str[5:7]
     data['mom'] = round(data.rev.diff()/data.rev.shift(1), 4)
     yoy = pd.DataFrame()
     yoy = data.groupby('month').apply(get_yoy).reset_index(drop=True, inplace=False)
-    yoy = yoy[yoy.Year >= '2017']
     return yoy
 
 def get_latest(data):
