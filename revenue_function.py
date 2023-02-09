@@ -11,7 +11,6 @@ def get_yoy(data):
     return data
 
 def get_st_mom_yoy(data):
-    data['rev'] = round(data['rev']/1000, 1)
     data['Year'] =  data.rev_period.astype(str).str[0:4]
     data['month'] = data.rev_period.astype(str).str[5:7]
     data['mom'] = round(data.rev.diff()/data.rev.shift(1), 4)
@@ -98,3 +97,118 @@ def predict(data):
     predict = predict.groupby('month', as_index=False).apply(get_yoy).sort_values(['Year', 'month'])
     return predict.tail(13)
 
+
+
+def get_wet_reg(data):
+    if data.shape[0] < 5 :
+        return []
+    data = data.tail(5)
+    sample_weight = [1, 1, 2, 3, 5]
+
+    gpm = LinearRegression()
+    gpm.fit(np.array(data['營業收入淨額']).reshape(-1, 1), np.array(data['營業毛利']), sample_weight)
+    gpm_intercept = round(gpm.intercept_, 2)
+    gpm_coef = gpm.coef_[0]
+
+    opm = LinearRegression()
+    opm.fit(np.array(data['營業收入淨額']).reshape(-1, 1), np.array(data['營業利益']), sample_weight)
+    opm_intercept = round(opm.intercept_, 2)
+    opm_coef = opm.coef_[0]
+    return [gpm_intercept, round(gpm_coef, 2), opm_intercept, round(opm_coef, 2)]
+
+
+def forecast_income_statement(data):
+    data = data.tail(6)
+    data = data.loc[:, ['代號', '名稱', '年/月', '營業收入淨額q', 'est_cost', 'est_gmp', 'est_expense', 'other_expense',
+                    'est_opm', 'non_operating_pnl', 'ebit', 'tax_expense', 'controless_pnl','net_income_margin', 
+                    '加權平均股數', 'eps_est']]
+    data = data.rename({'est_cost':'營業成本', 'est_gmp':'營業毛利', 'est_expense':'營業費用',
+                            'other_expense':'其他收益及費損淨額', 'est_opm':'營業利益', 
+                            'non_operating_pnl':'營業外收入及支出', 'ebit':'稅前淨利', 'tax_expense':'所得稅費用', 
+                            'controless_pnl':'歸屬非控制權益淨利（損）', 'net_income_margin':'稅後淨利', 
+                            'eps_est':'每股盈餘'}, axis=1).reset_index(drop=True).transpose()
+    return data
+
+def weighted_forecast_estimation(forecast_data, forecast_df):
+    t = forecast_data.rolling(5)
+    WLS = pd.DataFrame((map(get_wet_reg,t))).set_axis(['gpm_fixed_cost', 'gpm_variable_cost', 
+                                                       'opm_fixed_cost', 'opm_variable_cost'], axis=1)
+    WLS
+    forecast_data = pd.concat([forecast_data.reset_index(drop=True), WLS], axis=1)
+    result = pd.merge(forecast_df, forecast_data, how='outer').sort_values('年/月')
+
+    result['other_expense'] = trimmean(result['其他收益及費損淨額'])
+    result['non_operating_pnl'] = trimmean(result['營業外收入及支出'])
+    result['tax'] = 0.8
+    result['controless_pnl'] = trimmean(result['歸屬非控制權益淨利（損）'])
+
+    # estimate forecasting data
+    result = pd.concat([result.loc[:, ['代號', '名稱', '年/月', '營業收入淨額q', '營業收入淨額', '營業成本', '營業毛利', 
+                                       '營業費用','其他收益及費損淨額', '營業利益', '營業外收入及支出', '稅前淨利', 
+                                       '所得稅費用', '歸屬非控制權益淨利（損）', '稅後淨利est','加權平均股數', '每股盈餘']].shift(-1), 
+                        result.loc[:, ['gpm_fixed_cost', 'gpm_variable_cost', 'opm_fixed_cost', 'opm_variable_cost',
+                                       'other_expense', 'non_operating_pnl', 'tax', 'controless_pnl']]], axis=1)
+    result['代號'] = result['代號'].fillna(method='ffill')
+    result['名稱'] = result['名稱'].fillna(method='ffill')
+    result['加權平均股數'] = result['加權平均股數'].fillna(method='ffill')
+    result = result[result['加權平均股數'] > 0]
+    result['營業收入淨額q'] = result['營業收入淨額q'].astype(float)
+    result['est_cost'] = result['營業收入淨額q'] - (result['營業收入淨額q']*result.gpm_variable_cost + result.gpm_fixed_cost)
+    result['est_gmp'] = result['營業收入淨額q']*result.gpm_variable_cost + result.gpm_fixed_cost
+
+    result['est_expense'] = result['est_gmp'] - (result['營業收入淨額q']*result.opm_variable_cost + result.opm_fixed_cost)
+    result['est_opm'] = result.est_gmp - result.est_expense
+
+    result['ebit'] = result['est_opm'] + result['other_expense'] + result['non_operating_pnl']
+    result['tax_expense'] = result['ebit']*0.2
+    result['net_income_margin'] = result['ebit']*0.8 - result['controless_pnl']
+    result['eps_est'] = round(result.net_income_margin*1000/ result['加權平均股數'], 2)
+    result = result[result['est_cost'].isna() == False]
+    result['年/月'].iloc[-1] = result['年/月'].iloc[-1] + ' 預估值'
+    return result
+
+
+def forecast_estimation(forecast_data, forecast_df):
+    # gross profit margin
+    model = RollingOLS.from_formula("營業毛利 ~ 營業收入淨額", data=forecast_data, window=5)
+    gpm_reg = model.fit()
+    gpm_reg = round(gpm_reg.params.rename({'Intercept':'gpm_fixed_cost', '營業收入淨額':'gpm_variable_cost'}, axis=1), 2)
+
+    # operating profit margin
+    model = RollingOLS.from_formula("營業利益 ~ 營業收入淨額", data=forecast_data, window=5)
+    opm_reg = model.fit()
+    opm_reg = round(opm_reg.params.rename({'Intercept':'opm_fixed_cost', '營業收入淨額':'opm_variable_cost'}, axis=1), 2)
+
+    result = pd.concat([forecast_data, gpm_reg], axis=1)
+    result = pd.concat([result, opm_reg], axis=1)
+
+    result = pd.merge(forecast_df, result, how='outer').sort_values('年/月')
+    result['other_expense'] = trimmean(result['其他收益及費損淨額'])
+    result['non_operating_pnl'] = trimmean(result['營業外收入及支出'])
+    result['tax'] = 0.8
+    result['controless_pnl'] = trimmean(result['歸屬非控制權益淨利（損）'])
+
+    # estimate forecasting data
+    result = pd.concat([result.loc[:, ['代號', '名稱', '年/月', '營業收入淨額q', '營業收入淨額', '營業成本', '營業毛利', 
+                                       '營業費用','其他收益及費損淨額', '營業利益', '營業外收入及支出', '稅前淨利', 
+                                       '所得稅費用', '歸屬非控制權益淨利（損）', '稅後淨利est', '加權平均股數','每股盈餘']].shift(-1), 
+                        result.loc[:, ['gpm_fixed_cost', 'gpm_variable_cost', 'opm_fixed_cost', 'opm_variable_cost',
+                                       'other_expense', 'non_operating_pnl', 'tax', 'controless_pnl']]], axis=1)
+    result['代號'] = result['代號'].fillna(method='ffill')
+    result['名稱'] = result['名稱'].fillna(method='ffill')
+    result['加權平均股數'] = result['加權平均股數'].fillna(method='ffill')
+    result = result[result['加權平均股數'] > 0]
+    result['營業收入淨額q'] = result['營業收入淨額q'].astype(float)
+    result['est_cost'] = result['營業收入淨額q'] - (result['營業收入淨額q']*result.gpm_variable_cost + result.gpm_fixed_cost)
+    result['est_gmp'] = result['營業收入淨額q']*result.gpm_variable_cost + result.gpm_fixed_cost
+
+    result['est_expense'] = result['est_gmp'] - (result['營業收入淨額q']*result.opm_variable_cost + result.opm_fixed_cost)
+    result['est_opm'] = result.est_gmp - result.est_expense
+
+    result['ebit'] = result['est_opm'] + result['other_expense'] + result['non_operating_pnl']
+    result['tax_expense'] = result['ebit']*0.2
+    result['net_income_margin'] = result['ebit']*0.8 - result['controless_pnl']
+    result['eps_est'] = round(result.net_income_margin*1000/ result['加權平均股數'], 2)
+    result = result[result['est_cost'].isna() == False]
+    result['年/月'].iloc[-1] = result['年/月'].iloc[-1] + ' 預估值'
+    return result
