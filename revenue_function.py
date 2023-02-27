@@ -16,7 +16,7 @@ def get_st_mom_yoy(data):
     data['mom'] = round(data.rev.diff()/data.rev.shift(1), 4)
     yoy = pd.DataFrame()
     yoy = data.groupby('month').apply(get_yoy).reset_index(drop=True, inplace=False)
-    return yoy[yoy.Year >= '2020']
+    return yoy[yoy.Year >= '2016']
 
 def get_latest(data):
     latest = data.drop_duplicates(subset='st_code', keep='last')
