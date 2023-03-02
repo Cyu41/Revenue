@@ -229,73 +229,74 @@ root_layout = html.Div(
 
 
 # latest update
-def update_latest(df):
-    code = str(df['st_code'].values).strip("[]")
-    mask = code
-    search = """
-    select st_code, st_name, rev_period, declaration_date, rev
-    from tej_revenue
-    where st_code = ("""+ str(mask) +""");
-    """
-    data = pd.read_sql(search, engine)
-    data = fn.get_st_mom_yoy(data)
-    data = data.sort_values('rev_period', ascending=True)
-    return data.tail(1)
+# def update_latest(df):
+#     code = str(df['st_code'].values).strip("[]")
+#     mask = code
+#     search = """
+#     select st_code, st_name, rev_period, declaration_date, rev
+#     from tej_revenue
+#     where st_code = ("""+ str(mask) +""");
+#     """
+#     data = pd.read_sql(search, engine)
+#     data = fn.get_st_mom_yoy(data)
+#     data = data.sort_values('rev_period', ascending=True)
+#     return data.tail(1)
 
 
-latest_search = """
-select *
-from tej_revenue
-where rev_period = (select MAX(rev_period) from tej_revenue);
-"""
-df = pd.read_sql(latest_search, engine)
+# latest_search = """
+# select *
+# from tej_revenue
+# where rev_period = (select MAX(rev_period) from tej_revenue);
+# """
+# df = pd.read_sql(latest_search, engine)
 
-latest_df = df.groupby('st_code', as_index=False).apply(update_latest)
-latest_df = latest_df.drop(['Year','month'], axis=1).sort_values('rev_period', ascending=False)
-latest_df = latest_df.set_axis(['公司代碼', '公司簡稱', '年月', '最新公告日期', '營收', 'MOM%', 'YOY%'], axis=1)
+# latest_df = df.groupby('st_code', as_index=False).apply(update_latest)
+# latest_df = latest_df.drop(['Year','month'], axis=1).sort_values('rev_period', ascending=False)
+# latest_df = latest_df.set_axis(['公司代碼', '公司簡稱', '年月', '最新公告日期', '營收', 'MOM%', 'YOY%'], axis=1)
 
-latest_rev_col = ['公司代碼', '公司簡稱', '年月', '最新公告日期', '營收', 'MOM%', 'YOY%']
-latest_rev = html.Div([
-    html.P("同產業合併月營收排名", 
-           style={
-               "font-size": "1.5rem", 
-               "letter-spacing": "0.1rem", 
-               "color": "black", 
-               "text-align": "center"
-               }),
-    html.Div([
-        dash_table.DataTable(
-            latest_df.to_dict('records'),
-            # id='latest_rev_table',
-            columns=[{"name": i, "id": i, "deletable": True} for i in (latest_rev_col)],
-            page_current=0,
-            page_size=10,
-            # page_action='custom',
-            sort_action='custom',
-            sort_mode='single',
-            sort_by=[],
-            style_cell={
-                'font_size': '16px',
-                'overflow':'hidden',
-                'textOverflow':'ellipsis',
-                'color':'black', 
-                "flex": "5 83%",
-            },
-            style_cell_conditional=[
-                {
-                    'if': {'column_id': i},
-                    'textAlign': 'left'
-                } for i in ['公司代碼', '公司簡稱', '最新公告月份']
-            ]
-        )], 
-        className="dbc-row-selectable",
-    )
-], style={'width':'100%', 'overflowX': 'scroll'})
+# latest_rev_col = ['公司代碼', '公司簡稱', '年月', '最新公告日期', '營收', 'MOM%', 'YOY%']
+# latest_rev = html.Div([
+#     html.P("同產業合併月營收排名", 
+#            style={
+#                "font-size": "1.5rem", 
+#                "letter-spacing": "0.1rem", 
+#                "color": "black", 
+#                "text-align": "center"
+#                }),
+#     html.Div([
+#         dash_table.DataTable(
+#             latest_df.to_dict('records'),
+#             # id='latest_rev_table',
+#             columns=[{"name": i, "id": i, "deletable": True} for i in (latest_rev_col)],
+#             page_current=0,
+#             page_size=10,
+#             # page_action='custom',
+#             sort_action='custom',
+#             sort_mode='single',
+#             sort_by=[],
+#             style_cell={
+#                 'font_size': '16px',
+#                 'overflow':'hidden',
+#                 'textOverflow':'ellipsis',
+#                 'color':'black', 
+#                 "flex": "5 83%",
+#             },
+#             style_cell_conditional=[
+#                 {
+#                     'if': {'column_id': i},
+#                     'textAlign': 'left'
+#                 } for i in ['公司代碼', '公司簡稱', '最新公告月份']
+#             ]
+#         )], 
+#         className="dbc-row-selectable",
+#     )
+# ], style={'width':'100%', 'overflowX': 'scroll'})
+
 
 
 tab1 = dbc.Tab(label="上市櫃產業年度合併報表", tab_id="tab-1", children=root_layout)
-tab2 = dbc.Tab(label="營收即時更新資訊", tab_id="tab-2", children=latest_rev)
-tab3 = dbc.Tab(label="ETF價差套利資訊", tab_id="tab-3")
+tab2 = dbc.Tab(label="營收獲利預估", tab_id="tab-2")#, children=latest_rev)
+tab3 = dbc.Tab(label="台股分類", tab_id="tab-3")
 tabs = dbc.Tabs([tab1, tab2, tab3])
 
 
