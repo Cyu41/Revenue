@@ -574,8 +574,8 @@ def update_table(submit, st_input):
         gruop_num = industry[industry['new_industry'] == st_group_num]
         group_data = daily_trading[daily_trading.st_code.isin(gruop_num['代號'].astype(str)) == True]
         group_title = 'ML並無分類，在TEJ為 '+['、'.join(gruop_num.new_industry.drop_duplicates().to_list())][0] + ' 概念股報酬走勢'
-        
-        
+
+
     group_data = group_data.groupby('st_code', as_index=False).apply(latest_return)
     group_data.loc[:, ['近一日漲跌%', '近一週漲跌%', '近一月漲跌%']] = group_data.loc[:, ['近一日漲跌%', '近一週漲跌%', '近一月漲跌%']]*100
 
