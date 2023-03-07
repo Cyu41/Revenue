@@ -421,7 +421,7 @@ cluster_layout = html.Div(
 
 tab1 = dbc.Tab(label="上市櫃產業年度合併報表", tab_id="tab-1")#, children=root_layout)
 tab2 = dbc.Tab(label="營收獲利預估", tab_id="tab-2")#, children=latest_rev)
-tab3 = dbc.Tab(label="台股分類", tab_id="tab-3", children=cluster_layout)
+tab3 = dbc.Tab(label="台股分類", tab_id="tab-3") #, children=cluster_layout)
 tabs = dbc.Tabs([tab1, tab2, tab3])
 
 
