@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import plotly.figure_factory as ff  # 圖形工廠
 from plotly.subplots import make_subplots  # 繪製子圖
 
+
 def get_yoy(data):
     data = data.sort_values('Year')
     data['yoy'] = round(data.rev.diff()/data.rev.shift(1), 4)

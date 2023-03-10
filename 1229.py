@@ -421,7 +421,7 @@ cluster_layout = html.Div(
 
 tab1 = dbc.Tab(label="上市櫃產業年度合併報表", tab_id="tab-1")#, children=root_layout)
 tab2 = dbc.Tab(label="營收獲利預估", tab_id="tab-2")#, children=latest_rev)
-tab3 = dbc.Tab(label="台股分類", tab_id="tab-3", children=cluster_layout)
+tab3 = dbc.Tab(label="台股分類", tab_id="tab-3") #, children=cluster_layout)
 tabs = dbc.Tabs([tab1, tab2, tab3])
 
 
@@ -574,8 +574,8 @@ def update_table(submit, st_input):
         gruop_num = industry[industry['new_industry'] == st_group_num]
         group_data = daily_trading[daily_trading.st_code.isin(gruop_num['代號'].astype(str)) == True]
         group_title = 'ML並無分類，在TEJ為 '+['、'.join(gruop_num.new_industry.drop_duplicates().to_list())][0] + ' 概念股報酬走勢'
-        
-        
+
+
     group_data = group_data.groupby('st_code', as_index=False).apply(latest_return)
     group_data.loc[:, ['近一日漲跌%', '近一週漲跌%', '近一月漲跌%']] = group_data.loc[:, ['近一日漲跌%', '近一週漲跌%', '近一月漲跌%']]*100
 
