@@ -48,7 +48,17 @@ stock_info['st_code'] = stock_info['公司簡稱'].str[0:4]
 stock_info['st_name'] = stock_info['公司簡稱'].str[5:]
 stock_info = stock_info.drop('公司簡稱', axis=1)
 
-
+"""
+cluster data
+"""
+cluster = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/cluster_industry.csv')
+industry = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/industry.csv')
+daily_trading = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/daily_trading.csv', low_memory=False)
+def latest_return(data):
+    data['近一日漲跌％'] = round(data.Close.pct_change(1), 4)
+    data['近一週漲跌％'] = round(data.Close.pct_change(5), 4)
+    data['近一月漲跌％'] = round(data.Close.pct_change(20), 4)
+    return data
 
 """
 app layout
@@ -206,7 +216,7 @@ table = html.Div([
 main_panel_layout = html.Div(
     id="panel-upper-lower",
     children=[
-        rank,
+        # rank,
         html.Br(), 
         table,
         html.Br(),
@@ -269,7 +279,7 @@ stock_panel_layout = html.Div(
     ],
 )
 
-group_table_col = ['date','近一日漲跌%','近一週漲跌%','近一月漲跌%']
+group_table_col = ['date','近一日漲跌％','近一週漲跌％','近一月漲跌％']
 group_table = html.Div([
     html.P("概念股報酬走勢",
            style={
@@ -306,38 +316,51 @@ group_table = html.Div([
 ], style={"flex-direction": "row", 'width':'100%', 'overflowX': 'scroll'})
 
 
-cluster_table_col = ['st_code','st_name','近一日漲跌% ','近一週漲跌% ','近一月漲跌%']
-cluster_table = html.Div([
-    dash_table.DataTable(
-        id='cluster_table',
-        columns=[{"name": i, "id": i, "deletable": True} for i in (cluster_table_col)],
-        page_current=0,
-        page_size=5,
-        page_action='custom',
-        sort_action='native',
-        sort_mode='single',
-        sort_by=[],
-        style_cell={
-            'font_size': '16px',
-            'overflow':'hidden',
-            'textOverflow':'ellipsis',
-            'color':'black', 
-            "flex": "5 83%",
-        }
-        )],className="dbc-row-selectable")
+cluster_table_col = ['st_code','st_name','近一日漲跌％','近一週漲跌％','近一月漲跌％']
+all_cluster_table = html.Div([
+    html.P("概念股報酬走勢",
+           style={
+               "font-size": "1.2rem", 
+               "letter-spacing": "0.1rem", 
+               "color": "black", 
+               "text-align": "left"
+               }
+           ),
+    html.Div(
+        dash_table.DataTable(
+            id='cluster_table',
+            columns=[{"name": i, "id": i, "deletable": True} for i in (cluster_table_col)],
+            page_current=0,
+            page_size=10,
+            # page_action='custom',
+            style_cell={
+                'font_size': '16px',
+                'overflow':'hidden',
+                'textOverflow':'ellipsis',
+                'color':'black',
+            },
+            style_cell_conditional=[
+                {
+                    'if': {'column_id': 'Year'},
+                    'textAlign': 'left'
+                }
+            ],
+            export_format="xlsx",
+            export_headers="display",
+        ),
+        className="dbc-row-selectable",
+    )
+], style={"flex-direction": "row", 'width':'100%', 'overflowX': 'scroll'})
 
 
 stock_main_panel_layout = html.Div(
     id="cluster_panel-upper-lower",
     children=[
-        group_table,
+        # group_table,
         html.Br(),
-        html.Div([
-            dcc.Graph(id='graph_cluster')
-        ], style={"flex-direction": "row"}),
+        all_cluster_table,
         html.Br(),
-        cluster_table
-    ],
+        html.Div([dcc.Graph(id='graph_cluster')], style={"flex-direction": "row"})],
     style={"flex-direction": "column", 
            "flex": "5 83%",
            "padding": "2.5rem 1rem",
@@ -476,5 +499,108 @@ def update_table(submit, dropdown1, dropdown2, st_input):
             print('跳警示通知：查無該股票營收，請重新輸入，並reset')
 
 
+"""
+callback: Cluster
+"""
+@app.callback(
+    [Output("graph_cluster", "figure"), 
+     Output('cluster_table', 'data'),
+     ],
+    [Input('cluster_submit', 'n_clicks'),
+     State("cluster_input", "value")],
+    prevent_initial_call=True
+)
+def update_table(submit, st_input):
+    st_input = int(st_input)
+    try:
+        st_group_num = cluster[cluster['代號'] == st_input]['歆凱分組'].values[0]
+        gruop_num = cluster[cluster['歆凱分組'] == st_group_num]
+        group_data = daily_trading[daily_trading.st_code.isin(gruop_num['代號'].astype(str)) == True]
+        group_title = 'TEJ為 '+['、'.join(gruop_num.new_industry.drop_duplicates().to_list())][0] + ' 概念股報酬走勢'
+
+    except IndexError:
+        # print('跳通知：ML並無幫他分類到組別')
+        st_group_num = industry[industry['代號'] == int(st_input)]['new_industry'].values[0]
+        gruop_num = industry[industry['new_industry'] == st_group_num]
+        group_data = daily_trading[daily_trading.st_code.isin(gruop_num['代號'].astype(str)) == True]
+        group_title = 'ML並無分類，在TEJ為 '+['、'.join(gruop_num.new_industry.drop_duplicates().to_list())][0] + ' 概念股報酬走勢'
+
+    group_data = group_data.groupby('st_code', as_index=False).apply(latest_return)
+    group_data.loc[:, ['近一日漲跌％', '近一週漲跌％', '近一月漲跌％']] = group_data.loc[:, ['近一日漲跌％', '近一週漲跌％', '近一月漲跌％']]*100
+
+    latest = group_data.loc[:, ['st_code', 'st_name','近一日漲跌％', '近一週漲跌％', '近一月漲跌％']]
+    latest = latest.drop_duplicates('st_code', keep='last').reset_index(drop=True)
+    group_return = group_data.groupby('date', as_index=False).agg(
+        {'近一日漲跌％':'mean', '近一週漲跌％':'mean', '近一月漲跌％':'mean'})
+    group_return_figure = group_return.tail(1)
+    group_return['近一日漲跌%'] = group_return['近一日漲跌%'].cumsum()
+
+
+    # 族群報酬率圖
+    mask = group_return['近一日漲跌％'] >= 0
+    group_return['ret_above'] = np.where(mask, group_return['近一日漲跌％'], 0)
+    group_return['ret_below'] = np.where(mask, 0, group_return['近一日漲跌％'])
+    group_return
+    fig = go.Figure(go.Scatter(
+        y=group_return['ret_above'],
+        x=group_return.date, 
+        fill='tozeroy',
+        fillcolor='rgba(240, 128, 128, 0.5)',
+        opacity=0.5, 
+        mode='none',
+        text=group_return['近一日漲跌％']))
+
+    fig.add_trace(go.Scatter(
+        y=group_return['ret_below'],
+        x=group_return.date, 
+        fill='tozeroy',
+        fillcolor='rgba(26,150,65,0.5)',
+        opacity=0.5, 
+        mode='none',
+        text=group_return['近一日漲跌％']))
+
+    fig.update_xaxes(showspikes=True, spikecolor="rgb(204, 204, 204)", spikemode="across", spikethickness=0.1)
+    fig.update_layout(
+    #     hovermode='x',
+        title = group_title,
+        xaxis=dict(
+            showline=True,
+            showgrid=False,
+            showticklabels=True,
+            linecolor='rgb(204, 204, 204)',
+            linewidth=2,
+            ticks='outside',
+            tickfont=dict(
+                family='Arial',
+                size=12,
+                color='rgb(82, 82, 82)',
+            ),
+        ),
+        yaxis=dict(
+            showgrid=True,
+            zeroline=True,
+            zerolinecolor='rgb(204, 204, 204)',
+            gridcolor='rgb(204, 204, 204)',
+            showline=False,
+            showticklabels=True,
+        ),
+        autosize=False,
+        margin=dict(
+            autoexpand=False,
+            l=100,
+            r=20,
+            t=110,
+        ),
+        showlegend=False,
+        plot_bgcolor='white'
+
+    )
+    fig.update_xaxes(title='日期')
+    # fig
+    return fig, latest.to_dict('records')
+
+
+    
+    
 if __name__ == '__main__':
     app.run_server(debug=True)
