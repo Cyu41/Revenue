@@ -1,3 +1,7 @@
+import pandas as pd
+import numpy as np
+
+
 def get_yoy(data):
     data = data.sort_values('Year')
     data['yoy'] = round(data.rev.diff()/data.rev.shift(1), 4)
@@ -55,7 +59,7 @@ def get_predict(data):
         predict['rev'] = predict['predict_month_rev']
         predict = pd.concat([data.sort_values('rev_period'), predict], axis=0).sort_values(['Year', 'month'])
         predict['mom'] = predict.rev.diff() / predict.rev.shift(1)
-        predict = predict.groupby('month', as_index=False).apply(fn.get_yoy).sort_values(['Year', 'month'])
+        predict = predict.groupby('month', as_index=False).apply(get_yoy).sort_values(['Year', 'month'])
         predict['rev_period'] = '* ' + predict.Year + '/' + predict.month
         predict = predict.drop(['ratio','wt_avg_ratio','predict_annul_rev','predict_month_rev'], axis=1)
         return predict.tail(12)
