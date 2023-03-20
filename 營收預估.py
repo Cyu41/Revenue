@@ -34,7 +34,7 @@ engine = create_engine('postgresql://{}:{}@{}:{}/{}'.format(
 
 
 """
-callback input & output detail 
+import revenue data
 """
 revenue = pd.read_sql('industry', engine)
 new_industry_name = revenue['TSE新產業名.1'].dropna()
@@ -48,8 +48,9 @@ stock_info['st_code'] = stock_info['公司簡稱'].str[0:4]
 stock_info['st_name'] = stock_info['公司簡稱'].str[5:]
 stock_info = stock_info.drop('公司簡稱', axis=1)
 
+
 """
-cluster data
+import cluster data
 """
 cluster = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/cluster_industry.csv')
 industry = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/industry.csv')
@@ -60,11 +61,13 @@ def latest_return(data):
     data['近一月漲跌％'] = round(data.Close.pct_change(20), 4)
     return data
 
+
 """
 app layout
 """
 dbc_css = "https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates/dbc.min.css"
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, dbc_css])
+app.title = '小飛鷹'
 
 # server = app.server
 
@@ -226,7 +229,7 @@ main_panel_layout = html.Div(
             dcc.Graph(id='graph_yoy')
         ], style={"flex-direction": "row"})
     ],
-    style={"flex-direction": "column", 
+    style={"flex-direction": "column",
            "flex": "5 83%",
            "padding": "2.5rem 1rem",
            "display":"flex",
@@ -243,23 +246,83 @@ root_layout = html.Div(
     ],
 )
 
+"""
+最新公告營收
+"""
+db = pd.read_sql('tej_revenue', engine).drop('index', axis=1)
+db['rev'] = round(db['rev']/1000, 2)
+
+update = pd.read_excel("/Users/yuchun/Revenue/2022月營收更新報表_yuchun.xlsm", sheet_name='工作表1', header=6,
+                       usecols=[3,4], names=['name', 'rev_period'])
+update['rev_period'] = pd.to_datetime(update['rev_period'], format='%Y%m').dt.strftime('%Y/%m')
+
+latest = update.rev_period.head(1).values[0]
+latest_data = db.groupby('st_code', as_index=False).apply(fn.get_st_mom_yoy).reset_index(drop=True)
+latest_data = latest_data.loc[:, ['st_code', 'st_name', 'rev_period', 'rev', 'mom', 'yoy']]
+latest_data = latest_data[latest_data.rev_period == latest]
+
+
+"""
+營收預估
+"""
+predict_data = pd.read_csv('/Users/yuchun/Revenue/Predict_REV/2023/03營收預估.csv')
+predict_data = predict_data[predict_data.yoy <= 1000000000].sort_values('yoy', ascending=False)
+
+predict_data_futures = pd.read_csv('/Users/yuchun/Revenue/Predict_REV/2023/03營收預估(個股期).csv')
+predict_data_futures = predict_data_futures[predict_data_futures.yoy <= 1000000000].sort_values('yoy', ascending=False)
+
+predict_layout = html.Div(
+    [
+        dcc.Dropdown(
+            ['所有產業', '特定產業類別', '所有產業（個股期）', '特定產業類別（個股期）'], 
+            '所有產業', 
+            id='predict-dropdown'
+            ),
+        html.Br(),
+        html.Div(
+            html.Button("送出查詢",
+                        id='predict-submit',
+                        n_clicks=0, 
+                        style={
+                            "color":"#fec036",
+                            "font-size":"15px", 
+                            "width":"10rem", 
+                            "height":"2rem"
+                            }
+                        )
+            ),
+        dash_table.DataTable(
+            id='predict_table',
+            page_current=0,
+            page_size=10000,
+            # page_action='custom',
+            style_cell={
+                'font_size': '16px',
+                'overflow':'hidden',
+                'textOverflow':'ellipsis',
+                'color':'black',
+            },
+            style_cell_conditional=[
+                {
+                    'if': {'column_id': 'Year'},
+                    'textAlign': 'left'
+                }
+            ],
+            export_format="xlsx",
+            export_headers="display",
+        ),
+        ],
+    style={"padding": "2.5rem 1rem", 'display': 'flex',}
+    )
+
 
 """
 台股分類
 """
-cluster = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/cluster_industry.csv')
-industry = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/industry.csv')
-daily_trading = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/daily_trading.csv', low_memory=False)
-def latest_return(data):
-    data['近一日漲跌%'] = round(data.Close.pct_change(1), 4)
-    data['近一週漲跌%'] = round(data.Close.pct_change(5), 4)
-    data['近一月漲跌%'] = round(data.Close.pct_change(20), 4)
-    return data
-
 stock_panel_layout = html.Div(
     id="cluster_panel-side",
     children=[
-        html.P(id="satellite-dropdown-text", children=[html.Br(), "機器學習台股分類"]),
+        html.P(id="cluster-text", children=[html.Br(), "機器學習台股分類"]),
         html.Br(),
         html.H1("輸入股號", style={"font-size": "1rem", "letter-spacing": "0.1rem", "color": "#787878", "text-align": "left"}),
         html.Div(dcc.Input(placeholder="輸入...", id='cluster_input', type='text', style={"color":"black", "font-size":"12px", "width":"20rem", "height":"2rem"})),
@@ -360,13 +423,15 @@ stock_main_panel_layout = html.Div(
         html.Br(),
         all_cluster_table,
         html.Br(),
-        html.Div([dcc.Graph(id='graph_cluster')], style={"flex-direction": "row"})],
-    style={"flex-direction": "column", 
-           "flex": "5 83%",
-           "padding": "2.5rem 1rem",
-           "display":"flex",
-           "width":'60%'
-           }
+        html.Div([dcc.Graph(id='graph_cluster')], style={"flex-direction": "row"})
+        ],
+    style={
+        "flex-direction": "column", 
+        "flex": "5 83%",
+        "padding": "2.5rem 1rem",
+        "display":"flex",
+        "width":'60%'
+        }
 )
 
 cluster_layout = html.Div(
@@ -379,8 +444,9 @@ cluster_layout = html.Div(
 
 
 tab1 = dbc.Tab(label="上市櫃產業年度合併報表", tab_id="tab-1", children=root_layout)
-tab2 = dbc.Tab(label="營收獲利預估", tab_id="tab-2")#, children=latest_rev)
+tab2 = dbc.Tab(label="次月營收預估", tab_id="tab-2", children=predict_layout)
 tab3 = dbc.Tab(label="台股分類", tab_id="tab-3", children=cluster_layout)
+# tab4 = dbc.Tab(label="最新公告營收排名", tab_id="tab-4", children=latest_revenue_layout)
 tabs = dbc.Tabs([tab1, tab2, tab3])
 
 
@@ -402,8 +468,8 @@ callback
     #  Output('rank_table', 'data'),
      Output("graph_rev", "figure"),
      Output("graph_mom", "figure"),
-     Output("graph_yoy", "figure")],
-
+     Output("graph_yoy", "figure")
+     ],
     [Input('submit', 'n_clicks'),
      State("new-dropdown-component", "value"),
      State("minor-dropdown-component", "value"),
@@ -446,7 +512,7 @@ def update_table(submit, dropdown1, dropdown2, st_input):
             YOY = fn.get_yoypic(data, data_predict, (title + ' 各年度月營收'))
 
             # 整理營收資訊表
-            table = data.pivot_table(values='rev', index='Year', columns='month').reset_index()
+            table = round(data.pivot_table(values='rev', index='Year', columns='month').reset_index(), 2)
             data_predict.Year = data_predict.Year + str(' 預估值')
             table = pd.concat([table, data_predict.tail(12).pivot_table(index='Year', columns='month', values='rev').reset_index()],axis=0)
             table = table.to_dict('records')
@@ -489,7 +555,7 @@ def update_table(submit, dropdown1, dropdown2, st_input):
             YOY = fn.get_yoypic(data, data_predict, (title + ' 各年度月營收'))
 
             # 整理營收資訊表
-            table = data.pivot_table(values='rev', index='Year', columns='month').reset_index()
+            table = round(data.pivot_table(values='rev', index='Year', columns='month').reset_index(), 2)
             data_predict.Year = data_predict.Year + str(' 預估值')
             table = pd.concat([table, data_predict.tail(12).pivot_table(index='Year', columns='month', values='rev').reset_index()],axis=0)
             table = table.to_dict('records')
@@ -519,7 +585,6 @@ def update_table(submit, st_input):
         group_title = 'TEJ為 '+['、'.join(gruop_num.new_industry.drop_duplicates().to_list())][0] + ' 概念股報酬走勢'
 
     except IndexError:
-        # print('跳通知：ML並無幫他分類到組別')
         st_group_num = industry[industry['代號'] == int(st_input)]['new_industry'].values[0]
         gruop_num = industry[industry['new_industry'] == st_group_num]
         group_data = daily_trading[daily_trading.st_code.isin(gruop_num['代號'].astype(str)) == True]
@@ -540,7 +605,7 @@ def update_table(submit, st_input):
     mask = group_return['近一日漲跌％'] >= 0
     group_return['ret_above'] = np.where(mask, group_return['近一日漲跌％'], 0)
     group_return['ret_below'] = np.where(mask, 0, group_return['近一日漲跌％'])
-    group_return
+    
     fig = go.Figure(go.Scatter(
         y=group_return['ret_above'],
         x=group_return.date, 
@@ -559,7 +624,13 @@ def update_table(submit, st_input):
         mode='none',
         text=group_return['近一日漲跌％']))
 
-    fig.update_xaxes(showspikes=True, spikecolor="rgb(204, 204, 204)", spikemode="across", spikethickness=0.1)
+    fig.update_xaxes(
+        showspikes=True, 
+        spikecolor="rgb(204, 204, 204)", 
+        spikemode="across", 
+        spikethickness=0.1
+        )
+    
     fig.update_layout(
     #     hovermode='x',
         title = group_title,
@@ -596,11 +667,55 @@ def update_table(submit, st_input):
 
     )
     fig.update_xaxes(title='日期')
-    # fig
     return fig, latest.to_dict('records')
 
 
     
     
+
+@app.callback(
+    [Output('predict_table', 'data')],
+    [
+        Input('predict-submit', 'n_clicks'), 
+        State('predict-dropdown', 'value')
+     ],
+    prevent_initial_call=True
+)
+def update_table(submit, dropdown):
+    if dropdown == '所有產業':
+        table = predict_data
+        return table.to_dict('records')
+    
+    elif dropdown == '特定產業類別':
+        table = predict_data[(predict_data.new_industry_name != 'M1722 生技醫療') 
+                             & (predict_data.new_industry_name != 'M2326 光電業')
+                             & (predict_data.new_industry_name != 'M2331 其他電子業') 
+                             & (predict_data.new_industry_name != 'M2500 建材營造') 
+                             & (predict_data.new_industry_name != 'M2600 航運業') 
+                             & (predict_data.new_industry_name != 'M2800 金融業')
+                             & (predict_data.new_industry_name != 'M2900 貿易百貨')
+                             & (predict_data.new_industry_name != 'M3200 文化創意業')
+                             & (predict_data.minor_industry_name != 'M25A 建設')]
+        return table.to_dict('records')
+    
+    elif dropdown == '所有產業（個股期）':
+        table = predict_data_futures
+        return table.to_dict('records')
+    
+    elif dropdown == '特定產業類別（個股期）':
+        table = predict_data_futures[(predict_data_futures.new_industry_name != 'M1722 生技醫療') 
+                                     & (predict_data_futures.new_industry_name != 'M2326 光電業')
+                                     & (predict_data_futures.new_industry_name != 'M2331 其他電子業') 
+                                     & (predict_data_futures.new_industry_name != 'M2500 建材營造') 
+                                     & (predict_data_futures.new_industry_name != 'M2600 航運業') 
+                                     & (predict_data_futures.new_industry_name != 'M2800 金融業')
+                                     & (predict_data_futures.new_industry_name != 'M2900 貿易百貨')
+                                     & (predict_data_futures.new_industry_name != 'M3200 文化創意業')
+                                     & (predict_data_futures.minor_industry_name != 'M25A 建設')]
+        return table.to_dict('records')
+
+        
+    
 if __name__ == '__main__':
     app.run_server(debug=True)
+    

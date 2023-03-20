@@ -643,8 +643,7 @@ def update_table(submit, st_input):
 
     )
     fig.update_xaxes(title='日期')
-    
-    return group_return_figure.to_dict('records'), fig, latest.to_dict('records')
+    return group_return_figure.to_dict('records'), latest.to_dict('records'), fig
 
 if __name__ == '__main__':
     app.run_server(port=8050, debug=True)

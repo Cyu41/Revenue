@@ -3,76 +3,108 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as ff  # 圖形工廠
 from plotly.subplots import make_subplots  # 繪製子圖
-from dash import Dash, dcc, html, dash_table, Input, Output, callback, State, callback_context
-import dash_bootstrap_components as dbc
-from dash_bootstrap_templates import ThemeChangerAIO, template_from_url
-import pickle
-import urllib.request
-import ssl
-import certifi
 import numpy as np
 import schedule
 import psycopg2
 import psycopg2.extras as extras
 from sqlalchemy import create_engine
 
-
 cluster = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/cluster_industry.csv')
 industry = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/industry.csv')
 daily_trading = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/daily_trading.csv', low_memory=False)
+group = pd.merge(industry, cluster.loc[:, ['歆凱分組', '代號']], on='代號', how='left').drop('Unnamed: 0', axis=1)
+
 def latest_return(data):
-    data['近一日漲跌%'] = round(data.Close.pct_change(1), 4)
-    data['近一週漲跌%'] = round(data.Close.pct_change(5), 4)
-    data['近一月漲跌%'] = round(data.Close.pct_change(20), 4)
+    data['近一日漲跌％'] = round(data.Close.pct_change(1), 4)
+    data['近一週漲跌％'] = round(data.Close.pct_change(5), 4)
+    data['近一月漲跌％'] = round(data.Close.pct_change(20), 4)
     return data
 
-"""
-app layout
-"""
-dbc_css = "https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates/dbc.min.css"
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, dbc_css])
+def get_cluster_group_data(st_input):
+    lookup = np.where(st_input.isnumeric() == True, '代號', '名稱')
+    group_num = group[group[lookup].astype(str) == st_input]['歆凱分組'].values[0]
 
-server = app.server
+    if np.isnan(group_num) == True:
+        group_num = group[group[lookup].astype(str) == st_input]['industry_title'].values[0]
+        group_data = group[group['industry_title'] == group_num]
+        group_title = 'ML並無分類，在TEJ為 '+['、'.join(group_data.new_industry.drop_duplicates().to_list())][0] + ' 概念股報酬走勢'
 
-header = html.Div(
-    [
-        html.Br(),
-        html.Img(src=app.get_asset_url("logo.png"), style={"width":"5rem", "height":"3rem"}),
-        html.Br(),
-        html.H3(id='header', children=["小飛鷹"], style={'color':'black'})
-    ],style={"padding": "2rem 2rem"}
-)
+    else:
+        group_data = group[group['歆凱分組'] == group_num]
+        group_title = 'TEJ為 '+['、'.join(group_data.new_industry.drop_duplicates().to_list())][0] + ' 概念股報酬走勢'
 
 
-tab1 = dbc.Tab(label="上市櫃產業年度合併報表", tab_id="tab-1")
-tab2 = dbc.Tab(label="營收獲利預估", tab_id="tab-2")#, children=latest_rev)
-tab3 = dbc.Tab(label="台股分類", tab_id="tab-3")
-tabs = dbc.Tabs([tab1, tab2, tab3])
+    df = daily_trading[daily_trading.st_code.isin(group_data['代號'].astype(str))]
+    df = df.groupby('st_code', as_index=False).apply(latest_return)
 
+    latest = df.loc[:, ['st_code', 'st_name', '近一日漲跌％','近一週漲跌％','近一月漲跌％']].drop_duplicates('st_code', keep='last')
+    latest = latest.rename({'st_code':'代號', 'st_name':'名稱'}, axis=1)
+    group_return = df.groupby('date', as_index=False).agg({'近一日漲跌％':'mean', '近一週漲跌％':'mean', '近一月漲跌％':'mean'})
+    group_return_latest = group_return.tail(1)
 
-app.layout = html.Div(
-    [
-        header,
-        tabs
-    ],
-    style={"padding": "2rem 4rem"}
-)
+    mask = group_return['近一日漲跌％'] >= 0
+    group_return['ret_above'] = np.where(mask, group_return['近一日漲跌％'], 0)
+    group_return['ret_below'] = np.where(mask, 0, group_return['近一日漲跌％'])
 
+    fig = go.Figure(go.Scatter(
+        y=group_return['ret_above'],
+        x=group_return.date, 
+        fill='tozeroy',
+        fillcolor='rgba(240, 128, 128, 0.5)',
+        opacity=0.5, 
+        mode='none',
+        text=group_return['近一日漲跌％']))
 
+    fig.add_trace(go.Scatter(
+        y=group_return['ret_below'],
+        x=group_return.date, 
+        fill='tozeroy',
+        fillcolor='rgba(26,150,65,0.5)',
+        opacity=0.5, 
+        mode='none',
+        text=group_return['近一日漲跌％']))
 
+    fig.update_xaxes(
+        showspikes=True, 
+        spikecolor="rgb(204, 204, 204)", 
+        spikemode="across", 
+        spikethickness=0.1
+        )
 
+    fig.update_layout(
+    #     hovermode='x',
+        title = group_title,
+        xaxis=dict(
+            showline=True,
+            showgrid=False,
+            showticklabels=True,
+            linecolor='rgb(204, 204, 204)',
+            linewidth=2,
+            ticks='outside',
+            tickfont=dict(
+                family='Arial',
+                size=12,
+                color='rgb(82, 82, 82)',
+            ),
+        ),
+        yaxis=dict(
+            showgrid=True,
+            zeroline=True,
+            zerolinecolor='rgb(204, 204, 204)',
+            gridcolor='rgb(204, 204, 204)',
+            showline=False,
+            showticklabels=True,
+        ),
+        autosize=False,
+        margin=dict(
+            autoexpand=False,
+            l=100,
+            r=20,
+            t=110,
+        ),
+        showlegend=False,
+        plot_bgcolor='white'
 
-
-
-"""
-Call back
-"""
-
-
-
-
-if __name__ == '__main__':
-    app.run_server(port=8040, debug=True)
-    
-    
-    
+    )
+    fig.update_xaxes(title='日期')
+    return fig, latest.to_dict('records'), group_return_latest.to_dict('records')

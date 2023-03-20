@@ -66,3 +66,13 @@ predict_nxt_month.to_csv('/Users/yuchun/Revenue/Predict_REV/{}營收預估.csv'.
                          encoding='utf_8_sig', 
                          header=True, 
                          index=False)
+
+# 有發個股期的個股
+futures_data = """
+SELECT DISTINCT 標的證券 FROM 個股期歷史資料（近月及近二月）;
+"""
+st_future = pd.read_sql(futures_data, engine)
+st_future['st_code'] = st_future['標的證券'].str[:4]
+predict_nxt_month_f = predict_nxt_month[predict_nxt_month.st_code.isin(st_future.st_code)]
+predict_nxt_month_f.to_csv('/Users/yuchun/Revenue/Predict_REV/{}營收預估(個股期).csv'.format(filename), 
+                           encoding='utf_8_sig', header=True, index=False)

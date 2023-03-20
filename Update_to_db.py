@@ -49,15 +49,18 @@ engine = create_engine(
     'postgresql://{}:{}@{}:{}/{}'.format(
         user, password, host, port, database), echo=True)
 
+db = pd.read_sql('tej_revenue', engine)
 
 db = pd.read_csv('db.csv', low_memory=False).reset_index(inplace=False, drop=True)
 db['st_code'] = db['st_code'].astype(str)
-order = db.columns.values.tolist()
-stock_info = db.loc[:, ['st_code', 'st_name', 'new_industry_name', 'minor_industry_name']].drop_duplicates(keep='first')
-update = pd.merge(update, stock_info, on=['st_name','st_code'], how='inner')
+order = db.drop('index', axis=1).columns.values.tolist()
+stock_info = db.loc[:, ['st_code', 'new_industry_name', 'minor_industry_name']].drop_duplicates(keep='first')
+update = pd.merge(update, stock_info, on=['st_code'], how='inner')
 update = update[order]
 update.to_sql('tej_revenue', con=engine, if_exists='append')
 
+pd.merge(db[db.rev_period == '2023/02'], update, on=['st_code', 'rev_period'], how='outer')
+update[update.st_code == db[db.rev_period == '2023/02'].st_code]
 
 for i in range(len(update)):
     try:
