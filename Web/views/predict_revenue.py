@@ -26,7 +26,7 @@ predict_data_futures = pd.read_csv('/Users/yuchun/Revenue/Predict_REV/2023/03營
 predict_data_futures = predict_data_futures[predict_data_futures.yoy <= 1000000000].sort_values('yoy', ascending=False)
 
 
-predict_table_col = ['代號', '名稱', 'yoy', 'mpm', '預估營收（百萬）', 'TEJ產業']
+predict_table_col = ['代號', '名稱', '預估月', 'yoy', 'mom', '預估營收（百萬）', 'TEJ產業']
 predict_revenue_page = html.Div([
     html.Div([
         html.P("次月營收估季",
@@ -132,7 +132,14 @@ predict_revenue_page = html.Div([
 )
 def statistics_switch_chart(switch):
     if switch == False:
-        table = predict_data
+        table = predict_data.loc[:
+            , ['st_code', 'st_name', 'rev_period', 'yoy', 'mom', 'rev', 'new_industry_name']]
+        table = table.rename({'st_code':'代號', 
+                              'st_name':'名稱', 
+                              'rev_period':'預估月', 
+                              'rev_period':'預估營收（百萬）', 
+                              'new_industry_name':'TEJ產業'
+                              }, axis=1)
         return table.to_dict('records')
     
     elif switch == True:
@@ -145,4 +152,13 @@ def statistics_switch_chart(switch):
                              & (predict_data.new_industry_name != 'M2900 貿易百貨')
                              & (predict_data.new_industry_name != 'M3200 文化創意業')
                              & (predict_data.minor_industry_name != 'M25A 建設')]
+        table = table.loc[:
+            , ['st_code', 'st_name', 'rev_period', 'yoy', 'mom', 'rev', 'new_industry_name']]
+        table = table.rename({'st_code':'代號', 
+                              'st_name':'名稱', 
+                              'rev_period':'預估月', 
+                              'rev_period':'預估營收（百萬）', 
+                              'new_industry_name':'TEJ產業'
+                              }, axis=1)
         return table.to_dict('records')
+

@@ -8,7 +8,7 @@ from server import app
 from views.industry_revenue import industry_revenue_page
 from views.latest_revenue import latest_revenue_page
 from views.predict_revenue import predict_revenue_page
-from views.predict_revenue_futures import predict_revenue_futures_page
+# from views.predict_revenue_futures import predict_revenue_futures_page
 from views.ml_cluster import ml_cluster_page
 
 
@@ -99,8 +99,8 @@ def render_page_content(pathname):
     elif pathname == '/predict_revenue':
         return predict_revenue_page
     
-    elif pathname == '/predict_revenue_futures':
-        return predict_revenue_futures_page
+    # elif pathname == '/predict_revenue_futures':
+    #     return predict_revenue_futures_page
 
     elif pathname == '/ml_cluster':
         return ml_cluster_page
