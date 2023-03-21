@@ -5,10 +5,12 @@ from dash.dependencies import Input, Output
 
 from server import app
 
-# from views.industry_revenue import industry_revenue_page
+from views.industry_revenue import industry_revenue_page
 from views.latest_revenue import latest_revenue_page
 from views.predict_revenue import predict_revenue_page
+from views.predict_revenue_futures import predict_revenue_futures_page
 from views.ml_cluster import ml_cluster_page
+
 
 app.layout = html.Div(
     [
@@ -26,7 +28,12 @@ app.layout = html.Div(
                                      'fontFamily': 'Open Sans'
                                      }
                                  ),
-                        html.H3(id='header', children=["小飛鷹"], style={'color':'black', 'fontFamily': 'Open Sans'})
+                        html.H3(id='header', children=["小飛鷹"], 
+                                style={
+                                    'color':'black', 
+                                    'fontFamily': 'Open Sans'
+                                    }
+                                )
                     ],style={"padding": "2rem 2rem"}
                 ),
 
@@ -37,30 +44,32 @@ app.layout = html.Div(
                     [
                         dbc.NavLink('上市櫃產業年度合併報表', href='/industry_revenue', active="exact"),
                         dbc.NavLink('最新公告營收', href='/latest_revenue', active="exact"),
+                        dbc.NavLink('最新公告營收（個股期）', href='/latest_revenue', active="exact"),
                         dbc.NavLink('預估營收', href='/predict_revenue', active="exact"),
                         dbc.NavLink('台股分群表現', href='/ml_cluster', active="exact"),
                     ],
                     vertical=True,
-                    pills=True
+                    pills=True,
+                    style={
+                        "padding": "2rem 2rem",
+                        'flex-direction': 'column'
+                    }
                 )
             ],
             style={
-                # 'flex': '0.5 10%',
-                'width': '30rem',
-                'padding': '7rem 4rem',
+                'width': '25%',
                 'display': 'flex',
                 'flex-direction': 'column',
-                'justify-content': 'start',
+                'justify-content': 'flex-start',
                 'backgroundColor': '#ededed'
             }
         ),
         html.Div(
             id='page-content',
             style={
-                # 'flex': '0.5 10%',
-                'width': '70rem',
+                'width': '75%',
                 'display': 'flex',
-                'fontFamily': 'Open Sans',
+                'justify-content': 'center',
             }
         )
     ],
@@ -81,14 +90,17 @@ app.layout = html.Div(
     Input('url', 'pathname')
 )
 def render_page_content(pathname):
-    # if pathname == '/industry_revenue':
-    #     return industry_revenue_page
+    if pathname == '/industry_revenue':
+        return industry_revenue_page
 
-    if pathname == '/latest_revenue':
+    elif pathname == '/latest_revenue':
         return latest_revenue_page
 
     elif pathname == '/predict_revenue':
         return predict_revenue_page
+    
+    elif pathname == '/predict_revenue_futures':
+        return predict_revenue_futures_page
 
     elif pathname == '/ml_cluster':
         return ml_cluster_page

@@ -16,8 +16,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
-# from callbacks.predict import predict_data
-
 from server import app
 
 
@@ -28,27 +26,32 @@ predict_data_futures = pd.read_csv('/Users/yuchun/Revenue/Predict_REV/2023/03營
 predict_data_futures = predict_data_futures[predict_data_futures.yoy <= 1000000000].sort_values('yoy', ascending=False)
 
 
+predict_table_col = ['代號', '名稱', 'yoy', 'mpm', '預估營收（百萬）', 'TEJ產業']
 predict_revenue_page = html.Div([
-    html.P("次月營收預估",
+    html.Div([
+        html.P("次月營收估季",
            style={
-               "font-size": "1.5rem", 
+               "font-size": "1.2rem", 
                "letter-spacing": "0.1rem", 
                "color": "black", 
                "text-align": "left"
                }
            ),
+        daq.BooleanSwitch(
+            id='predict-futures-boolean-switch',
+            on=False,
+            label="濾掉特定產業",
+            labelPosition="top",
+            color="#fec036",
+            ),
+    ]),
     html.Div(
         dash_table.DataTable(
-            id='predict-table',
-            columns=[
-                {"name": i, "id": i, "deletable": True, "selectable": True} for i in predict_data.columns
-            ],
-            data = predict_data.to_dict('records'),
-            sort_action="custom",
-            sort_mode='single',
-            page_action='custom',
-            page_current= 0,
-            page_size = 20,
+            id='predict_table',
+            columns=[{"name": i, "id": i} for i in (predict_table_col)],
+            page_current=0,
+            page_size=20,
+            # page_action='custom',
             style_cell={
                 'font_size': '16px',
                 'overflow':'hidden',
@@ -65,35 +68,74 @@ predict_revenue_page = html.Div([
             export_headers="display",
         ),
         className="dbc-row-selectable",
-        style={
-            'display': 'flex',
-            'padding': '1rem 1rem',
-            'font-family': 'Open Sans',
-            'flex-direction': 'row',
-            'justify-content': 'stretch'
-            },
-        )
+    )
     ], style={
-        "flex-direction": "row", 
         'width':'100%', 
         'padding': '4rem 4rem',
+        "flex-direction": "row", 
         'overflowX': 'scroll',
-        'fontFamily': 'Open Sans'
-        }
-    )
+        'font-family': 'Open Sans'
+        })
+
+
+# predict_revenue_page = html.Div([
+#     html.P("次月營收預估",
+#            style={
+#                "font-size": "1.5rem", 
+#                "letter-spacing": "0.1rem", 
+#                "color": "black", 
+#                "text-align": "left"
+#                }
+#            ),
+#     html.Div(
+#         dash_table.DataTable(
+#             id='predict-table',
+#             columns=[
+#                 {"name": i, "id": i, "selectable": True} for i in predict_data.columns
+#             ],
+#             data = predict_data.to_dict('records'),
+#             sort_action="custom",
+#             sort_mode='single',
+#             page_action='custom',
+#             page_current= 0,
+#             page_size = 20,
+#             style_cell={
+#                 'font_size': '16px',
+#                 'overflow':'hidden',
+#                 'textOverflow':'ellipsis',
+#                 'color':'black',
+#             },
+#             style_cell_conditional=[
+#                 {
+#                     'if': {'column_id': 'Year'},
+#                     'textAlign': 'left'
+#                 }
+#             ],
+#             export_format="xlsx",
+#             export_headers="display",
+#         ),
+#         className="dbc-row-selectable",
+#         )
+#     ],    style={
+#         "flex-direction": "row", 
+#         'width':'100%', 
+#         'padding': '4rem 4rem',
+#         'overflowX': 'scroll',
+#         'font-family': 'Open Sans'
+#         })
 
 
 
 @app.callback(
-    Output('predict-table', 'data'),
+    Output('predict_table', 'data'),
     Input('predict-boolean-switch', 'on'),
 )
 def statistics_switch_chart(switch):
-    if switch != 'on':
+    if switch == False:
         table = predict_data
         return table.to_dict('records')
     
-    elif switch == 'on':
+    elif switch == True:
         table = predict_data[(predict_data.new_industry_name != 'M1722 生技醫療') 
                              & (predict_data.new_industry_name != 'M2326 光電業')
                              & (predict_data.new_industry_name != 'M2331 其他電子業') 

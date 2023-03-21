@@ -93,6 +93,12 @@ side_panel_layout = html.Div(
                         )
             )
     ],
+    style={
+        "flex-direction": "column",
+        "padding": "2.5rem 1rem",
+        "display":"flex",
+        "width":'75%'
+        }
 )
 
 
@@ -134,7 +140,7 @@ rank = html.Div([
         )], 
         className="dbc-row-selectable",
     )
-], style={'width':'100%', 'overflowX': 'scroll'})
+], style={'width':'75%', 'overflowX': 'scroll'})
 
 
 table_col = ['Year'] + ["%.2d" % i for i in range(1, 13)]
@@ -188,20 +194,29 @@ main_panel_layout = html.Div(
         ], style={"flex-direction": "row"})
     ],
     style={"flex-direction": "column",
-           "flex": "5 83%",
+        #    "flex": "5 83%",
            "padding": "2.5rem 1rem",
            "display":"flex",
-           "width":'100%'
+           "width":'75%'
            }
 )
 
+
 # Root
-root_layout = html.Div(
+industry_revenue_page = html.Div(
     id="root",
     children=[
         side_panel_layout,
         main_panel_layout
     ],
+    style={
+        # 'flex': '0.5 10%',
+        "flex-direction": "column",
+        'width': '100%',
+        'display': 'flex',
+        'fontFamily': 'Open Sans',
+        'justify-content': 'flex-start'
+        }
 )
 
 
