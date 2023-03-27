@@ -12,10 +12,9 @@ import psycopg2
 import psycopg2.extras as extras
 from sqlalchemy import create_engine
 import dash
-
+import views.all_function as fn
 
 from server import app
-
 
 """
 Import data
@@ -25,27 +24,23 @@ industry = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/industry.csv')
 daily_trading = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/daily_trading.csv', low_memory=False).drop('Unnamed: 0', axis=1)
 group = pd.merge(industry, cluster.loc[:, ['歆凱分組', '代號']], on='代號', how='left').drop('Unnamed: 0', axis=1)
 
-def latest_return(data):
-    data['近一日漲跌％'] = round(data.Close.pct_change(1), 4)
-    data['近一週漲跌％'] = round(data.Close.pct_change(5), 4)
-    data['近一月漲跌％'] = round(data.Close.pct_change(20), 4)
-    return data
 
 
 stock_panel_layout = html.Div(
     id="cluster_panel-side",
     children=[
-        html.P(
+        html.H1(
             id="cluster-text", 
             children=[html.Br(), "機器學習台股分類"], 
             style={
-                "font-size": "3rem", 
+                "font-size": "2rem", 
                 "color": "#787878"
                 }
             )
         ,
-        html.H1("輸入股號", style={"font-size": "1.5rem", "letter-spacing": "0.1rem", "color": "#787878", "text-align": "left"}),
-        html.Div(dcc.Input(placeholder="輸入...", id='cluster_input', type='text', style={"color":"black", "font-size":"12px", "width":"15rem", "height":"1.8rem"})),
+        html.P("輸入股號", style={"font-size": "1.2rem", "letter-spacing": "0.1rem", "color": "black", "text-align": "left"}),
+        html.Div(dcc.Input(placeholder="輸入...", id='cluster_input', type='text', style={"color":"black", "font-size":"1.2rem", "width":"15rem", "height":"1.5rem"})),
+        html.Br(),
         html.Div(
             html.Button("送出查詢",
                         id='cluster_submit',
@@ -53,9 +48,8 @@ stock_panel_layout = html.Div(
                         style={
                             "color":"#fec036",
                             "font-size":"15px", 
-                            "font-family":'Open Sans',
                             "width":"10rem", 
-                            "height":"1.5rem"
+                            "height":"2rem"
                             }
                         )
             )
@@ -106,7 +100,7 @@ all_cluster_table = html.Div([
                "letter-spacing": "0.2rem", 
                "color": "black", 
                "text-align": "left",
-               'font-family': 'Open Sans'
+               'font-family': '"Open Sans", sans-serif'
                }
            ),
     html.Div(
@@ -158,13 +152,11 @@ ml_cluster_page = html.Div(
     ],
     style={
         "flex-direction": "row", 
-        'width':'100%', 
-        'padding': '4rem 4rem',
+        'padding': '3rem 3rem',
         'overflowX': 'scroll',
-        'font-family': 'Open Sans'
+        'font-family': '"Open Sans", sans-serif'
         }
 )
-
 
 
 """
@@ -194,14 +186,14 @@ def update_table(submit, st_input):
 
 
     df = daily_trading[daily_trading.st_code.isin(group_data['代號'].astype(str))]
-    df = df.groupby('st_code', as_index=False).apply(latest_return)
+    df = df.groupby('st_code', as_index=False).apply(fn.latest_return)
 
     latest = df.loc[:, ['st_code', 'st_name', '近一日漲跌％','近一週漲跌％','近一月漲跌％']].drop_duplicates('st_code', keep='last')
     latest = latest.rename({'st_code':'代號', 'st_name':'名稱'}, axis=1)
     group_return = df.groupby('date', as_index=False).agg({'近一日漲跌％':'mean', '近一週漲跌％':'mean', '近一月漲跌％':'mean'})
     group_return_latest = group_return.tail(1)
+
     group_return['近一日漲跌％'] = group_return['近一日漲跌％'].cumsum()
-    
     mask = group_return['近一日漲跌％'] >= 0
     group_return['ret_above'] = np.where(mask, group_return['近一日漲跌％'], 0)
     group_return['ret_below'] = np.where(mask, 0, group_return['近一日漲跌％'])

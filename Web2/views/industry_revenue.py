@@ -1,36 +1,18 @@
-import dash_html_components as html
-import dash_core_components as dcc
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, dash_table, Input, Output, callback, State, callback_context
-from dash.dependencies import Input, Output
-import revenue_function as fn
+import views.all_function as fn
 from sqlalchemy import create_engine
 import pandas as pd
-import revenue_function as fn
 
 from server import app
 
 """
-connect to db
-"""
-host='database-1.cyn7ldoposru.us-east-1.rds.amazonaws.com'
-port='5432'
-user='Yu'
-password='m#WA12J#'
-database="JQC_Revenue1"
-
-engine = create_engine('postgresql://{}:{}@{}:{}/{}'.format(
-        user, password, host, port, database), echo=True)
-
-
-"""
 import revenue data
 """
-revenue = pd.read_sql('industry', engine)
+revenue = pd.read_csv('/Users/yuchun/Desktop/Web/revenue.csv', low_memory=False)
 new_industry_name = revenue['TSE新產業名.1'].dropna()
 minor_industry_name = revenue['TEJ子產業名.1'].dropna()
-db = pd.read_sql('tej_revenue', engine).drop('index', axis=1)
-db['rev'] = round(db['rev']/1000, 2)
+db = pd.read_csv('/Users/yuchun/Desktop/Web/db.csv', low_memory=False).drop('Unnamed: 0', axis=1)
 db = db.groupby('st_code', as_index=False).apply(fn.get_st_mom_yoy).reset_index(drop=True)
 stock_info = revenue.iloc[:, 1:4].rename({'TSE新產業名':'new_industry_name',
                                           'TEJ子產業名':'minor_industry_name'}, axis=1)
@@ -69,15 +51,12 @@ satellite_body = html.P(
 side_panel_layout = html.Div(
     id="panel-side",
     children=[
-        # html.Img(src=app.get_asset_url("logo.png"), style={"width":"5rem", "height":"3rem"}),
         satellite_dropdown_text,
         html.Div(id="panel-side-text", children=new_title),
         html.Div(id="new-dropdown", children=new_dropdown),
-        html.Br(),
         html.Div(children=minor_title), 
         html.Div(id="minor-dropdown", children=minor_dropdown),
-        html.Br(),
-        html.H1("輸入股號或公司名稱查詢", style={"font-size": "1rem", "letter-spacing": "0.1rem", "color": "#787878", "text-align": "center"}),
+        html.H5("輸入股號或公司名稱查詢", style={"font-size": "1rem", "letter-spacing": "0.1rem", "color": "#787878", "text-align": "center"}),
         html.Div(dcc.Input(placeholder="輸入...", id='st_input', type='text', style={"color":"black", "font-size":"12px", "width":"20rem", "height":"2rem"})),
         html.Br(),
         html.Div(
@@ -92,57 +71,13 @@ side_panel_layout = html.Div(
                             }
                         )
             )
-    ],
-    style={
-        "flex-direction": "column",
-        "padding": "2.5rem 1rem",
-        "display":"flex",
-        "width":'75%'
-        }
+    ]
 )
 
 
 """
 Main Panel
 """
-rank_col = ['公司代碼', '公司簡稱', '最新公告日期', '營收', 'MOM%', 'YOY%']
-rank = html.Div([
-    html.P("同產業合併月營收排名", 
-           style={
-               "font-size": "1.2rem", 
-               "letter-spacing": "0.1rem", 
-               "color": "black", 
-               "text-align": "left"
-               }),
-    html.Div([
-        dash_table.DataTable(
-            id='rank_table',
-            columns=[{"name": i, "id": i, "deletable": True} for i in (rank_col)],
-            page_current=0,
-            page_size=5,
-            page_action='custom',
-            sort_action='native',
-            sort_mode='single',
-            sort_by=[],
-            style_cell={
-                'font_size': '16px',
-                'overflow':'hidden',
-                'textOverflow':'ellipsis',
-                'color':'black', 
-                "flex": "5 83%",
-            },
-            style_cell_conditional=[
-                {
-                    'if': {'column_id': i},
-                    'textAlign': 'left'
-                } for i in ['公司代碼', '公司簡稱', '最新公告月份']
-            ]
-        )], 
-        className="dbc-row-selectable",
-    )
-], style={'width':'75%', 'overflowX': 'scroll'})
-
-
 table_col = ['Year'] + ["%.2d" % i for i in range(1, 13)]
 table = html.Div([
     html.P("各年度月營收",
@@ -193,16 +128,9 @@ main_panel_layout = html.Div(
             dcc.Graph(id='graph_yoy')
         ], style={"flex-direction": "row"})
     ],
-    style={"flex-direction": "column",
-        #    "flex": "5 83%",
-           "padding": "2.5rem 1rem",
-           "display":"flex",
-           "width":'75%'
-           }
 )
 
 
-# Root
 industry_revenue_page = html.Div(
     id="root",
     children=[
@@ -210,13 +138,10 @@ industry_revenue_page = html.Div(
         main_panel_layout
     ],
     style={
-        # 'flex': '0.5 10%',
-        "flex-direction": "column",
-        'width': '100%',
         'display': 'flex',
-        'fontFamily': 'Open Sans',
-        'justify-content': 'flex-start'
-        }
+        'flex-direction': 'column',
+        'font-family': '"Open Sans", sans-serif'
+    }
 )
 
 

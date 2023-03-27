@@ -6,6 +6,6 @@ app = dash.Dash(
 )
 
 # 设置网页title
-app.title = '小飛鷹相關報表'
+app.title = '小飛鷹報表'
 
 server = app.server

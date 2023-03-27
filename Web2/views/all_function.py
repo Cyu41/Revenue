@@ -4,6 +4,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as ff  # 圖形工廠
 from plotly.subplots import make_subplots  # 繪製子圖
+from sklearn.linear_model import LinearRegression
+from statsmodels.regression.rolling import RollingOLS, RollingWLS
+
+def latest_return(data):
+    data['近一日漲跌％'] = round(data.Close.pct_change(1), 4)
+    data['近一週漲跌％'] = round(data.Close.pct_change(5), 4)
+    data['近一月漲跌％'] = round(data.Close.pct_change(20), 4)
+    return data
+
 
 
 def get_yoy(data):
@@ -167,6 +176,12 @@ def weighted_forecast_estimation(forecast_data, forecast_df):
     result = result[result['est_cost'].isna() == False]
     result['年/月'].iloc[-1] = result['年/月'].iloc[-1] + ' 預估值'
     return result
+
+def trimmean(data):
+    rolling_num = 5
+    count = round((data.rolling(rolling_num).sum() - data.rolling(rolling_num).max() 
+                   - data.rolling(rolling_num).min())/3, 2)
+    return count
 
 
 def forecast_estimation(forecast_data, forecast_df):
