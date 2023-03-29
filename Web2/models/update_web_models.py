@@ -28,6 +28,7 @@ db[['year', 'month']] = db.rev_period.str.split('/', expand=True)
 # db.rev = round(db.rev/1000, 2)
 print('完成DB撈資料', datetime.datetime.now())
 
+
 """
 function
 """
@@ -266,6 +267,11 @@ print('完成每日更新個股收盤資訊', datetime.datetime.now())
 """
 機器學習分組相關
 """
+cluster = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/cluster_industry.csv')
+group = pd.merge(industry, cluster.loc[:, ['歆凱分組', '代號']].rename({'代號':'st_code'}, axis=1), on='st_code', how='left')
+group['歆凱分組'] = np.where(group['歆凱分組'].isna() == True, 'ML無分組', group['歆凱分組'])
+group.st_code = group.st_code.astype(str)
+
 def latest_return(data):
     data['近一日漲跌％'] = round(data.close.pct_change(1)*100, 2)
     data['近一週漲跌％'] = round(data.close.pct_change(5)*100, 2)
@@ -275,14 +281,16 @@ def latest_return(data):
 ml_db = daily_trading_db[daily_trading_db.st_code.isin(group.st_code) == True].drop('index', axis=1)
 ml_db = ml_db.groupby('st_code', as_index=False).apply(latest_return)
 
+
 """
 最新的分組報酬
 """
-ml_latest_return = df.drop_duplicates('st_code', keep='last').loc[:, ['st_code', '近一日漲跌％', '近一週漲跌％', '近一月漲跌％']]
+ml_latest_return = ml_db.drop_duplicates('st_code', keep='last').loc[:, ['st_code', '近一日漲跌％', '近一週漲跌％', '近一月漲跌％']]
 ml_latest_return = pd.merge(group, ml_latest_return, on='st_code', how='left')
 ml_latest_return.to_csv('/Users/yuchun/Revenue/Web2/models/ml_latest_return.csv', 
                         encoding='utf_8_sig', header=True)
 print('機器學習分組最新報酬完成', datetime.datetime.now())
+
 
 """
 近一年的日報酬，繪圖用
@@ -292,7 +300,6 @@ latest_year_return = ml_db[ml_db.date >= year_ago_date].loc[:, ['st_code', '近�
 latest_year_return.to_csv('/Users/yuchun/Revenue/Web2/models/latest_year_return.csv', 
                           encoding='utf_8_sig', header=True, index=False)
 print('機器學習分組近一年報酬完成', datetime.datetime.now())
-
 
 
 """
