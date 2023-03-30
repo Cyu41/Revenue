@@ -17,30 +17,49 @@ import views.all_function as fn
 
 from server import app
 
+"""
+Data import
+"""
+predict_data = pd.read_csv('/Users/yuchun/Revenue/Web2/models/營收預估.csv')
+cb = pd.read_pickle('/Users/yuchun/Revenue/Web2/models/cb.pkl')
+st_futures = pd.read_pickle('/Users/yuchun/Revenue/Web2/models/st_futures.pkl')
+filtered = pd.read_pickle('/Users/yuchun/Revenue/Web2/models/filtered.pkl')
 
-predict_data = pd.read_csv('/Users/yuchun/Revenue/Predict_REV/2023/03營收預估.csv')
 
+"""
+Web Layout
+"""
+switches = html.Div([
+    html.Div([html.P(['濾掉特定產業'],style={'font_size': '1rem', "color": "#787878"})]),
+    html.Div([daq.BooleanSwitch(id='filtered-boolean-switch', on=False,color="#fec036")]),
+    html.Div([html.P(['有發個股期'],style={'font_size': '1rem', "color": "#787878"})]),
+    html.Div([daq.BooleanSwitch(id='st_futures-boolean-switch',on=False,color="#fec036")]), 
+    html.Div([html.P(['有發可轉債CB'],style={'font_size': '1rem', "color": "#787878"})]),
+    html.Div([daq.BooleanSwitch(id='cb-boolean-switch',on=False,color="#fec036")])
+    ],
+    style={
+        'display': 'flex',
+        'flex-direction': 'row', 
+        'flex-wrap': 'wrap',
+        'vertical-align': 'middle'
+        }
+)
 
-predict_table_col = ['代號', '名稱', '預估月', 'yoy', 'mom', '預估營收（百萬）', 'TEJ產業']
+predict_table_col = ['代號', '名稱', '營收(百萬)', 'yoy％', 'mom％']
 predict_revenue_page = html.Div([
     html.Div([
-        html.H1("次月營收預估",
+        html.H1([html.Br(), "次月營收預估"],
            style={
                "font-size": "2rem", 
-               "letter-spacing": "0.1rem", 
-               "color": "black", 
-               "text-align": "left"
+               "color": "#787878"
+            #    "font-size": "1.5rem", 
+            #    "letter-spacing": "0.1rem", 
+            #    "color": "black", 
+            #    "text-align": "left"
                }
            ),
-        daq.BooleanSwitch(
-            id='predict-boolean-switch',
-            on=False,
-            label="濾掉特定產業",
-            labelPosition="top",
-            color="#fec036",
-            style={'font_size': '1rem', "color": "#787878"}
-            ),
     ]),
+    switches,
     html.Div(
         dash_table.DataTable(
             id='predict_table',
@@ -70,9 +89,7 @@ predict_revenue_page = html.Div([
     )
     ], style={
         "flex-direction": "row", 
-        'width':'100%', 
-        'padding': '4rem 4rem',
-        'overflowX': 'scroll',
+        'padding': '2rem 2rem',
         'font-family': '"Open Sans", sans-serif'
         }
     )
@@ -80,20 +97,23 @@ predict_revenue_page = html.Div([
 
 @app.callback(
     Output('predict_table', 'data'),
-    Input('predict-boolean-switch', 'on'),
+    [Input('cb-boolean-switch', 'on'),
+     Input('st_futures-boolean-switch', 'on'),
+     Input('filtered-boolean-switch', 'on')]
 )
-def statistics_switch_chart(on):
-    if on:
-        table = predict_data[(predict_data['TEJ產業'] != 'M1722 生技醫療') 
-                             & (predict_data['TEJ產業'] != 'M2326 光電業')
-                             & (predict_data['TEJ產業'] != 'M2331 其他電子業') 
-                             & (predict_data['TEJ產業'] != 'M2500 建材營造') 
-                             & (predict_data['TEJ產業'] != 'M2600 航運業') 
-                             & (predict_data['TEJ產業'] != 'M2800 金融業')
-                             & (predict_data['TEJ產業'] != 'M2900 貿易百貨')
-                             & (predict_data['TEJ產業'] != 'M3200 文化創意業')]
-        return table.to_dict('records')
-    
+def predict_switch_chart(cb_switch, st_futures_switch, filtered_switch):
+    if cb_switch == True:
+        cb_option = (predict_data['代號'].astype(str).isin(cb))
     else:
-        table = predict_data
-        return table.to_dict('records')
+        cb_option = (predict_data['代號'].isin(predict_data['代號']))
+    if st_futures_switch == True:
+        st_futures_option = (predict_data['代號'].astype(str).isin(st_futures))
+    else:
+        st_futures_option = (predict_data['代號'].isin(predict_data['代號']))
+
+    if filtered_switch == True:
+        filtered_option = (predict_data['代號'].astype(str).isin(filtered))
+    else:
+        filtered_option = (predict_data['代號'].isin(predict_data['代號']))
+
+    return predict_data[cb_option & st_futures_option & filtered_option].sort_values('yoy％', ascending=False).to_dict('records')        

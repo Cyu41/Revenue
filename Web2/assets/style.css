@@ -32,7 +32,7 @@ body {
 /*Side panel*/
 /**********************************************************************************************************************/
 #panel-side {
-    padding: 7rem 4rem;    /* 內邊距離*/
+    padding: 3rem 4rem;    /* 內邊距離*/
     display: flex;
     flex-direction: column;
     justify-content: start;
@@ -137,7 +137,7 @@ body {
 }
 
 #panel-side-text {
-    margin-top: 3rem;
+    margin-top: 1rem;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -209,33 +209,33 @@ body {
 
 @media (max-width: 1250px) {
     #panel-side {
-        padding: 3rem 10rem;
+        padding: 2rem 8rem;
     }
 }
 
 @media (max-width: 800px) {
     #panel-side {
-        padding: 3rem 7rem;
-        align-items: center;
+        padding: 2rem 8rem;
+        align-items: left;
     }
 
     #satellite-dropdown-text {
-        text-align: center;
+        text-align: left;
     }
 
     #panel-side-text {
-        align-items: center;
+        align-items: left;
     }
 
     .satellite-description {
-        text-align: center;
+        text-align: left;
     }
 
 }
 
 @media (max-width: 550px) {
     #panel-side {
-        padding: 3rem 3rem;
+        padding: 2rem 2rem;
     }
 }
 

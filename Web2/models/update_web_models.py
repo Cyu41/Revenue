@@ -105,6 +105,7 @@ def get_month_rev_predict_for_nxt_year(data):
     
 print('完成讀function', datetime.datetime.now())
 
+
 """
 整理營收worksheet
 """

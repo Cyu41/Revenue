@@ -9,31 +9,33 @@ from server import app
 """
 import revenue data
 """
-revenue = pd.read_csv('/Users/yuchun/Desktop/Web/revenue.csv', low_memory=False)
-new_industry_name = revenue['TSE新產業名.1'].dropna()
-minor_industry_name = revenue['TEJ子產業名.1'].dropna()
-db = pd.read_csv('/Users/yuchun/Desktop/Web/db.csv', low_memory=False).drop('Unnamed: 0', axis=1)
-db = db.groupby('st_code', as_index=False).apply(fn.get_st_mom_yoy).reset_index(drop=True)
-stock_info = revenue.iloc[:, 1:4].rename({'TSE新產業名':'new_industry_name',
-                                          'TEJ子產業名':'minor_industry_name'}, axis=1)
-stock_info['st_code'] = stock_info['公司簡稱'].str[0:4]
-stock_info['st_name'] = stock_info['公司簡稱'].str[5:]
-stock_info = stock_info.drop('公司簡稱', axis=1)
+db = pd.read_pickle('/Users/yuchun/Revenue/Web2/models/營收db.pkl')
+industry = pd.read_pickle('/Users/yuchun/Revenue/Web2/models/industry.pkl')
+predict = pd.read_csv('/Users/yuchun/Revenue/Web2/models/營收預估.csv')
+order = predict.columns.to_list()
+exchange_industry_name = pd.Series('~~請選擇 交易所 產業分類~~')
+tej_industry_name = pd.Series('~~請選擇 TEJ 產業分類~~')
+exchange_industry_name = pd.concat([exchange_industry_name, 
+                                    industry['交易所產業分類'].drop_duplicates().sort_values()], 
+                                   axis=0).reset_index(drop=True)
+tej_industry_name = pd.concat([tej_industry_name, 
+                                    industry['TEJ產業分類'].drop_duplicates().sort_values()], 
+                                   axis=0).reset_index(drop=True)
 
 
 # 產業年度營收
 new_dropdown = dcc.Dropdown(
     id='new-dropdown-component',
-    options=new_industry_name,
+    options=exchange_industry_name,
     clearable=False,
-    value=new_industry_name[0]
+    value=exchange_industry_name[0]
 )
 
 minor_dropdown = dcc.Dropdown(
     id='minor-dropdown-component',
-    options=minor_industry_name,
+    options=tej_industry_name,
     clearable=False,
-    value=minor_industry_name[0]
+    value=tej_industry_name[0]
 )
 
 satellite_dropdown_text = html.P(
@@ -78,9 +80,10 @@ side_panel_layout = html.Div(
 """
 Main Panel
 """
-table_col = ['Year'] + ["%.2d" % i for i in range(1, 13)]
+table_col = ['年份'] + ["%.2d" % i for i in range(1, 13)]
 table = html.Div([
-    html.P("各年度月營收",
+    html.P("各年度月營收", 
+           id='rev_search_title',
            style={
                "font-size": "1.2rem", 
                "letter-spacing": "0.1rem", 
@@ -152,7 +155,8 @@ callback
     [Output('rev_table', 'data'),
      Output("graph_rev", "figure"),
      Output("graph_mom", "figure"),
-     Output("graph_yoy", "figure")
+     Output("graph_yoy", "figure"),
+     Output("rev_search_title", "children")
      ],
     [Input('submit', 'n_clicks'),
      State("new-dropdown-component", "value"),
@@ -161,43 +165,41 @@ callback
     prevent_initial_call=True
 )
 def update_table(submit, dropdown1, dropdown2, st_input):
-    if st_input is None or st_input == '':
+    if (st_input == ' ') or (st_input == '') or (st_input == '輸入...'):
         try:
-            if (dropdown1 != new_industry_name[0]) and (dropdown2 == minor_industry_name[0]):
-                mask = (db.new_industry_name == dropdown1)
+            if dropdown1 != exchange_industry_name[0]:
+                mask = industry[industry['交易所產業分類'] == dropdown1].st_code.astype(str)
+                title = dropdown1 + ' '
+            else:
+                mask = industry[industry['TEJ產業分類'] == dropdown2].st_code.astype(str)
+                title = dropdown2 + ' '
 
-            elif (dropdown2 != minor_industry_name[0]) and (dropdown1 == new_industry_name[0]):
-                mask = (db.minor_industry_name == dropdown2)
-
-            elif (dropdown1 != new_industry_name[0]) and (dropdown2 != minor_industry_name[0]):
-                mask = (db.new_industry_name == dropdown1) & (db.minor_industry_name == dropdown2)
-
-            # 從 db 撈資料
-            data = db[mask]
-            data = data.groupby(by='st_code', as_index=False).apply(fn.get_st_mom_yoy).reset_index(drop=True,inplace=False)
+            data = db[db.st_code.isin(mask)]
             
-            # 產業最新營收公布情形
-            latest = fn.get_latest(data)
-
+            # 產業個股最新營收狀況
+            latest_company = data.drop_duplicates('st_code', keep='last')
+            latest_company = latest_company.rename({'st_code':'代號', 'st_name':'名稱', 'rev':'營收(百萬)'}, axis=1)
+            latest_company = latest_company[order]
+            
+            # 產業個股最新營收預估狀況
+            predict_company = predict[predict['代號'].isin(mask.astype(int))]
+            
             # 產業總營收狀況
-            data = data.groupby(by='rev_period', as_index=False).agg({'rev': 'sum'})
+            data = data.groupby('rev_period', as_index=False).agg({'rev':'sum'})
             data = fn.get_st_mom_yoy(data)
-
-            # 預測資料
-            data_predict = fn.predict(data)
-
+            data_predict = fn.get_month_rev_predict_for_nxt_year_industry(data)
+            
             # 繪圖
-            title = dropdown1 + ' '
-            REV = fn.get_revpic(data, data_predict, (title + ' 各年度月營收'))
-            MOM = fn.get_mompic(data, data_predict, (title + ' 各年度月營收'))
-            YOY = fn.get_yoypic(data, data_predict, (title + ' 各年度月營收'))
-
+            REV = fn.get_revpic(data[data.year > 2018], data_predict, (title + ' 各年度月營收'))
+            MOM = fn.get_mompic(data[data.year > 2018], data_predict, (title + ' 各年度月營收'))
+            YOY = fn.get_yoypic(data[data.year > 2018], data_predict, (title + ' 各年度月營收'))
+            
             # 整理營收資訊表
-            table = round(data.pivot_table(values='rev', index='Year', columns='month').reset_index(), 2)
-            data_predict.Year = data_predict.Year + str(' 預估值')
-            table = pd.concat([table, data_predict.tail(12).pivot_table(index='Year', columns='month', values='rev').reset_index()],axis=0)
-            table = table.to_dict('records')
-            return table, REV, MOM, YOY
+            table = round(data[data.year > 2018].pivot_table(values='rev', index='year', columns='month').reset_index(), 2)
+            data_predict.year = data_predict.year.astype(str) + str(' 預估值')
+            table = pd.concat([table, data_predict.tail(12).pivot_table(index='year', columns='month', values='rev').reset_index()],axis=0)
+            table = table.rename({'year':'年份'}, axis=1).to_dict('records')
+            return table, REV, MOM, YOY,(title + ' 各年度月營收')
         
         except KeyError:
             print("跳警示通知：該分類沒有相關個股，請重新選擇，並reset")
@@ -206,41 +208,36 @@ def update_table(submit, dropdown1, dropdown2, st_input):
     else:
         try:
             if (st_input.isdigit() == True):
-                industry = stock_info[stock_info.st_code == st_input].new_industry_name.values[0]
-                mask = ("new_industry_name = '" + industry + "'")
-                st_mask = 'st_code'
-
+                st_group = industry[industry.st_code.astype(str) == st_input]['交易所產業分類'].values[0]
+                mask = industry[industry['交易所產業分類'] == st_group].st_code.astype(str)
             else:
-                industry = stock_info[stock_info.st_name == st_input].new_industry_name.values[0]
-                mask = ("new_industry_name = '" + industry + "'")
-                st_mask = 'st_name'
+                st_group = industry[industry.st_name.astype(str) == st_input]['交易所產業分類'].values[0]
+                mask = industry[industry['交易所產業分類'] == st_group].st_code.astype(str)
+                
+            # 產業個股最新營收狀況
+            latest_company = db[db.st_code.isin(mask)].drop_duplicates('st_code', keep='last')
+            latest_company = latest_company.rename({'st_code':'代號', 'st_name':'名稱', 'rev':'營收(百萬)'}, axis=1)
+            latest_company = latest_company[order]
 
-            # 從 db 撈資料
-            data = db[db[st_mask] == st_input]
-            data = data.groupby(by='st_code', as_index=False).apply(fn.get_st_mom_yoy).reset_index(drop=True, inplace=False)
+            # 產業個股最新營收預估狀況
+            predict_company = predict[predict['代號'].isin(mask.astype(int))]
 
-            # 產業最新營收公布情形
-            latest = fn.get_latest(data)
-
-            # 轉換成個股總營收
-            data = data[data[st_mask] == st_input]
-            data = fn.get_st_mom_yoy(data)
-
-            # 預測資料
-            data_predict = fn.predict(data)
-
+            # 搜尋個股資訊
+            data = db[db.st_code == st_input]
+            data_predict = fn.get_month_rev_predict_for_nxt_year_industry(data)
+                
             # 繪圖
-            title = data.st_code[0] + ' ' + data.st_name[0]
-            REV = fn.get_revpic(data, data_predict, (title + ' 各年度月營收'))
-            MOM = fn.get_mompic(data, data_predict, (title + ' 各年度月營收'))
-            YOY = fn.get_yoypic(data, data_predict, (title + ' 各年度月營收'))
-
+            title = data.st_code.iloc[0] + ' ' + data.st_name.iloc[0]
+            REV = fn.get_revpic(data[data.year > '2018'], data_predict, (title + ' 各年度月營收'))
+            MOM = fn.get_mompic(data[data.year > '2018'], data_predict, (title + ' 各年度月營收'))
+            YOY = fn.get_yoypic(data[data.year > '2018'], data_predict, (title + ' 各年度月營收'))
+            
             # 整理營收資訊表
-            table = round(data.pivot_table(values='rev', index='Year', columns='month').reset_index(), 2)
-            data_predict.Year = data_predict.Year + str(' 預估值')
-            table = pd.concat([table, data_predict.tail(12).pivot_table(index='Year', columns='month', values='rev').reset_index()],axis=0)
-            table = table.to_dict('records')
-            return table, REV, MOM, YOY
+            table = round(data[data.year > '2018'].pivot_table(values='rev', index='year', columns='month').reset_index(), 2)
+            data_predict.year = data_predict.year.astype(str) + str(' 預估值')
+            table = pd.concat([table, data_predict.tail(12).pivot_table(index='year', columns='month', values='rev').reset_index()],axis=0)
+            table = table.rename({'year':'年份'}, axis=1).to_dict('records')
+            return table, REV, MOM, YOY,(title + ' 各年度月營收')
         
         except IndexError:
             print('跳警示通知：查無該股票營收，請重新輸入，並reset')

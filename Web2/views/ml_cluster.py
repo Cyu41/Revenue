@@ -19,10 +19,8 @@ from server import app
 """
 Import data
 """
-cluster = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/cluster_industry.csv')
-industry = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/industry.csv')
-daily_trading = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/daily_trading.csv', low_memory=False).drop('Unnamed: 0', axis=1)
-group = pd.merge(industry, cluster.loc[:, ['歆凱分組', '代號']], on='代號', how='left').drop('Unnamed: 0', axis=1)
+latest_year_return = pd.read_csv('/Users/yuchun/Revenue/Web2/models/latest_year_return.csv')
+ml_latest_return = pd.read_csv('/Users/yuchun/Revenue/Web2/models/ml_latest_return.csv').drop('Unnamed: 0', axis=1)
 
 
 
@@ -108,8 +106,7 @@ all_cluster_table = html.Div([
             id='cluster_table',
             columns=[{"name": i, "id": i} for i in (cluster_table_col)],
             page_current=0,
-            page_size=10,
-            # page_action='custom',
+            page_size=20,
             style_cell={
                 'font_size': '16px',
                 'overflow':'hidden',
@@ -152,7 +149,7 @@ ml_cluster_page = html.Div(
     ],
     style={
         "flex-direction": "row", 
-        'padding': '3rem 3rem',
+        'padding': '1rem 3rem',
         'overflowX': 'scroll',
         'font-family': '"Open Sans", sans-serif'
         }
@@ -172,31 +169,45 @@ callback
     prevent_initial_call=True
 )
 def update_table(submit, st_input):
-    lookup = np.where(st_input.isnumeric() == True, '代號', '名稱')
-    group_num = group[group[lookup].astype(str) == st_input]['歆凱分組'].values[0]
-
-    if np.isnan(group_num) == True:
-        group_num = group[group[lookup].astype(str) == st_input]['industry_title'].values[0]
-        group_data = group[group['industry_title'] == group_num]
-        group_title = 'ML並無分類，在TEJ為 '+['、'.join(group_data.new_industry.drop_duplicates().to_list())][0] + ' 概念股報酬走勢'
+    if (st_input.isdigit() == True):
+        ml_group_num = ml_latest_return[ml_latest_return.st_code.astype(str) == st_input]['歆凱分組'].values[0]
+        
+        if ml_group_num != 'ML無分':
+            ml_group_latest_return = ml_latest_return[ml_latest_return['歆凱分組'] == ml_group_num]
+        else:
+            ml_group_num = ml_latest_return[ml_latest_return.st_code.astype(str) == st_input]['TEJ產業分類'].values[0]
+            ml_group_latest_return = ml_latest_return[ml_latest_return['TEJ產業分類'] == ml_group_num]
 
     else:
-        group_data = group[group['歆凱分組'] == group_num]
-        group_title = 'TEJ為 '+['、'.join(group_data.new_industry.drop_duplicates().to_list())][0] + ' 概念股報酬走勢'
+        ml_group_num = ml_latest_return[ml_latest_return.st_name == st_input]['歆凱分組'].values[0]
 
+        if ml_group_num != 'ML無分':
+            ml_group_latest_return = ml_latest_return[ml_latest_return['歆凱分組'] == ml_group_num]
+        else:
+            ml_group_num = ml_latest_return[ml_latest_return.st_name.astype(str) == st_input]['TEJ產業分類'].values[0]
+            ml_group_latest_return = ml_latest_return[ml_latest_return['TEJ產業分類'] == ml_group_num]
 
-    df = daily_trading[daily_trading.st_code.isin(group_data['代號'].astype(str))]
-    df = df.groupby('st_code', as_index=False).apply(fn.latest_return)
-
-    latest = df.loc[:, ['st_code', 'st_name', '近一日漲跌％','近一週漲跌％','近一月漲跌％']].drop_duplicates('st_code', keep='last')
+            
+    # 回傳個別漲跌
+    latest = ml_group_latest_return.loc[:, ['st_code', 'st_name', 'date', '近一日漲跌％', '近一週漲跌％', '近一月漲跌％']]
     latest = latest.rename({'st_code':'代號', 'st_name':'名稱'}, axis=1)
-    group_return = df.groupby('date', as_index=False).agg({'近一日漲跌％':'mean', '近一週漲跌％':'mean', '近一月漲跌％':'mean'})
-    group_return_latest = group_return.tail(1)
+    # 回傳產業漲跌
+    # latest.groupby('date', as_index=False).agg({'近一日漲跌％':'mean', '近一週漲跌％':'mean', '近一月漲跌％':'mean'})
 
+    ml_group_title = ml_group_latest_return['歆凱分組'].drop_duplicates().values[0]
+    other = ['、'.join(ml_group_latest_return['交易所產業分類'].str.split(' ', expand=True).iloc[:, 1].drop_duplicates().to_list())][0]
+    tej = ['、'.join(ml_group_latest_return['TEJ產業分類'].str.split(' ', expand=True).iloc[:, 1].drop_duplicates().to_list())][0]
+
+    group_title = st_input + ' ' + ml_group_title + ' 組，在交易所為 ' + other + '，在TEJ為 ' + tej
+
+
+    group_return = latest_year_return[latest_year_return.st_code.isin(ml_group_latest_return.st_code)]
+    group_return = round(group_return.groupby('date', as_index=False).agg({'近一日漲跌％':'mean'}), 2)
     group_return['近一日漲跌％'] = group_return['近一日漲跌％'].cumsum()
     mask = group_return['近一日漲跌％'] >= 0
     group_return['ret_above'] = np.where(mask, group_return['近一日漲跌％'], 0)
     group_return['ret_below'] = np.where(mask, 0, group_return['近一日漲跌％'])
+
 
     fig = go.Figure(go.Scatter(
         y=group_return['ret_above'],
@@ -256,7 +267,7 @@ def update_table(submit, st_input):
         ),
         showlegend=False,
         plot_bgcolor='white'
-
     )
     fig.update_xaxes(title='日期')
-    return group_return_latest.to_dict('records'), latest.to_dict('records'), fig
+    return round(latest.groupby('date', as_index=False).agg({'近一日漲跌％':'mean', '近一週漲跌％':'mean', '近一月漲跌％':'mean'}), 2).tail(1).to_dict('records'), latest.to_dict('records'), fig
+    

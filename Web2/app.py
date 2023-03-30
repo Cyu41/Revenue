@@ -9,7 +9,7 @@ from views.industry_revenue import industry_revenue_page
 from views.ml_cluster import ml_cluster_page
 from views.latest_revenue import latest_revenue_page
 from views.predict_revenue import predict_revenue_page
-from views.futures_predict_revenue import futures_predict_revenue_page
+
 
 app.layout = html.Div(
     [
@@ -25,7 +25,7 @@ app.layout = html.Div(
                                      "height":"3rem", 
                                      }
                                  ),
-                    html.H3(
+                    html.H1(
                         id='header',
                         children=['小飛鷹報表'],
                         style={
@@ -45,23 +45,26 @@ app.layout = html.Div(
                 ,
 
                 # 子页面区域
-                dbc.Nav(
+                html.Div(
                     [
-                        dbc.NavItem(dbc.NavLink('上市櫃產業合併營收報表', href='/industry_revenue', active="exact")),
-                        dbc.NavItem(dbc.NavLink('最新營收公告', href='/latest_revenue', active="exact")),
-                        dbc.NavItem(dbc.NavLink('預估次月營收', href='/predict_revenue', active="exact")),
-                        dbc.NavItem(dbc.NavLink('預估次月營收（個股期）', href='/futures_predict_revenue', active="exact")),
-                        dbc.NavItem(dbc.NavLink('台股分群表現', href='/ml_cluster', active="exact")),
-                    ],
-                    vertical='md',
-                    pills=True
+                        dbc.Nav(
+                            [
+                                dbc.NavItem(dbc.NavLink('上市櫃產業合併營收報表', href='/industry_revenue', active="exact")),
+                                dbc.NavItem(dbc.NavLink('最新營收公告', href='/latest_revenue', active="exact")),
+                                dbc.NavItem(dbc.NavLink('預估次月營收', href='/predict_revenue', active="exact")),
+                                dbc.NavItem(dbc.NavLink('台股分群表現', href='/ml_cluster', active="exact")),
+                                ],
+                            vertical='md',
+                            pills=True
+                            )
+                    ]
                 )
             ],
             style={
-                'padding':'2rem 2rem',
+                'padding':'2rem 3rem',
                 'width': '25%',
-                'display': 'flex',
-                'flex-direction': 'column',
+                # 'display': 'flex',
+                # 'flex-direction': 'column',
                 'backgroundColor': '#ededed'
             }
         ),
@@ -92,20 +95,15 @@ app.layout = html.Div(
 def render_page_content(pathname):
     if pathname == '/industry_revenue':
         return industry_revenue_page
-
-    elif pathname == '/ml_cluster':
-        return ml_cluster_page
     
     elif pathname == '/latest_revenue':
         return latest_revenue_page
 
     elif pathname == '/predict_revenue':
         return predict_revenue_page
-
-    elif pathname == '/futures_predict_revenue':
-        return futures_predict_revenue_page
     
-
+    elif pathname == '/ml_cluster':
+        return ml_cluster_page
 
     return html.H1('您访问的页面不存在！')
 
