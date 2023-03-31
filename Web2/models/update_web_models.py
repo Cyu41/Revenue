@@ -132,8 +132,8 @@ latest = latest.rename({'【2】營收發布日':'營收發布日',
                         '【3】單月營收(千元)':'營收(百萬)'
                        }, axis=1).sort_values('yoy％', ascending=False)
 latest_period = update.rev_period.head(1).values[0]
-latest_filename = latest_period + '最新營收公布.csv'
-latest.to_csv('/Users/yuchun/Revenue/Web2/models/{}'.format(latest_filename), 
+# latest_filename = latest_period + '最新營收公布.csv'
+latest.to_csv('/Users/yuchun/Revenue/Web2/models/最新營收公布.csv',
               encoding='utf_8_sig', header=True, index=False)
 # 完成最新營收更新csv
 print('完成最新營收更新csv', datetime.datetime.now())
@@ -157,6 +157,8 @@ if update.shape[0] == 0:
 else:
     update.to_sql('tej_revenue', engine, if_exists='append')
     predict_nxt_month = pd.concat([db, update], axis=0)
+
+predict_nxt_month.to_pickle('/Users/yuchun/Revenue/Web2/models/營收db.pkl')
 print('完成上傳新增的營收資訊', datetime.datetime.now())
 
 
@@ -171,8 +173,8 @@ predict_order.remove('month')
 predict_nxt_month = predict_nxt_month.groupby('st_code', as_index=False).apply(get_month_rev_predict_for_nxt_year)
 predict_nxt_month = predict_nxt_month[predict_order].reset_index(drop=True)
 predict_nxt_month = predict_nxt_month.rename({'st_code':'代號', 'st_name':'名稱', 'rev':'營收(百萬)'}, axis=1)
-predict_nxt_month_filename = predict_nxt_month.rev_period.head(1).values[0][2:] + '營收預估.csv'
-predict_nxt_month.to_csv('/Users/yuchun/Revenue/Web2/models/{}'.format(predict_nxt_month_filename), 
+# predict_nxt_month_filename = predict_nxt_month.rev_period.head(1).values[0][2:] + '營收預估.csv'
+predict_nxt_month.to_csv('/Users/yuchun/Revenue/Web2/models/營收預估.csv',
                          encoding='utf_8_sig', 
                          header=True, 
                          index=False)
@@ -182,15 +184,13 @@ print('完成最新預估營收csv完整的', datetime.datetime.now())
 
 """
 不同分類的預估營收名單： CB/個股期/濾產業的
-"""
+
 ### 個股期 ###
-futures_data = """
-SELECT DISTINCT 標的證券 FROM 個股期歷史資料（近月及近二月）;
-"""
-st_future = pd.read_sql(futures_data, engine)
+st_future = pd.read_sql("個股期歷史資料（近月及近二月）", engine)
+st_future = st_future.sort_values('日期').drop_duplicates(subset='標的證券', keep='last')
 st_future['st_code'] = st_future['標的證券'].str[:4]
 # predict_nxt_month_futures = predict_nxt_month[predict_nxt_month['代號'].isin(st_future.st_code)]
-st_future.st_code.to_pickle("/Users/yuchun/Revenue/Web2/models/st_futures.pkl") 
+st_future[st_future['日期'] == st_future['日期'].drop_duplicates().tail(1).values[0]].st_code.to_pickle("/Users/yuchun/Revenue/Web2/models/st_futures.pkl") 
 print('完成個股期部分', datetime.datetime.now())
 
 
@@ -204,7 +204,7 @@ print('完成可轉債部分', datetime.datetime.now())
 
 
 ### 過濾產業 ###
-industry = pd.read_sql('full_industry', engine).drop('index', axis=1)
+# industry = pd.read_sql('full_industry', engine).drop('index', axis=1)
 filtered = industry[(industry['交易所產業分類'] != 'M1722 生技醫療') & 
                     (industry['交易所產業分類'] != 'M2326 光電業') &
                     (industry['交易所產業分類'] != 'M2331 其他電子業') &
@@ -218,6 +218,7 @@ filtered = industry[(industry['交易所產業分類'] != 'M1722 生技醫療') 
 # predict_nxt_month_filtered = predict_nxt_month[predict_nxt_month['代號'].isin(filtered.st_code.astype(str)) == True]
 filtered.st_code.astype(str).to_pickle('/Users/yuchun/Revenue/Web2/models/filtered.pkl')
 print('完成過濾產業', datetime.datetime.now())
+"""
 
 
 """
@@ -268,9 +269,10 @@ print('完成每日更新個股收盤資訊', datetime.datetime.now())
 """
 機器學習分組相關
 """
+industry = pd.read_pickle('/Users/yuchun/Revenue/Web2/models/industry.pkl')
 cluster = pd.read_csv('/Users/yuchun/Revenue/ML_Cluster/cluster_industry.csv')
 group = pd.merge(industry, cluster.loc[:, ['歆凱分組', '代號']].rename({'代號':'st_code'}, axis=1), on='st_code', how='left')
-group['歆凱分組'] = np.where(group['歆凱分組'].isna() == True, 'ML無分組', group['歆凱分組'])
+group['歆凱分組'] = np.where(group['歆凱分組'].isna() == True, 'ML無分', group['歆凱分組'])
 group.st_code = group.st_code.astype(str)
 
 def latest_return(data):
@@ -286,7 +288,7 @@ ml_db = ml_db.groupby('st_code', as_index=False).apply(latest_return)
 """
 最新的分組報酬
 """
-ml_latest_return = ml_db.drop_duplicates('st_code', keep='last').loc[:, ['st_code', '近一日漲跌％', '近一週漲跌％', '近一月漲跌％']]
+ml_latest_return = ml_db.drop_duplicates('st_code', keep='last').loc[:, ['st_code', 'date', '近一日漲跌％', '近一週漲跌％', '近一月漲跌％']]
 ml_latest_return = pd.merge(group, ml_latest_return, on='st_code', how='left')
 ml_latest_return.to_csv('/Users/yuchun/Revenue/Web2/models/ml_latest_return.csv', 
                         encoding='utf_8_sig', header=True)
@@ -297,11 +299,10 @@ print('機器學習分組最新報酬完成', datetime.datetime.now())
 近一年的日報酬，繪圖用
 """
 year_ago_date = ml_db.date.sort_values().drop_duplicates().tail(252).head(1).values[0]
-latest_year_return = ml_db[ml_db.date >= year_ago_date].loc[:, ['st_code', '近一日漲跌％']]
+latest_year_return = ml_db[ml_db.date >= year_ago_date].loc[:, ['st_code', 'date', '近一日漲跌％']]
 latest_year_return.to_csv('/Users/yuchun/Revenue/Web2/models/latest_year_return.csv', 
                           encoding='utf_8_sig', header=True, index=False)
 print('機器學習分組近一年報酬完成', datetime.datetime.now())
-
 
 """
 上傳到 Github 上面
