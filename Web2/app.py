@@ -45,26 +45,22 @@ app.layout = html.Div(
                 ,
 
                 # 子页面区域
-                html.Div(
+                dbc.Nav(
                     [
-                        dbc.Nav(
-                            [
-                                dbc.NavItem(dbc.NavLink('上市櫃產業合併營收報表', href='/industry_revenue', active="exact")),
-                                dbc.NavItem(dbc.NavLink('最新營收公告', href='/latest_revenue', active="exact")),
-                                dbc.NavItem(dbc.NavLink('預估次月營收', href='/predict_revenue', active="exact")),
-                                dbc.NavItem(dbc.NavLink('台股分群表現', href='/ml_cluster', active="exact")),
-                                ],
-                            vertical='md',
-                            pills=True
-                            )
-                    ]
-                )
+                        dbc.NavItem(dbc.NavLink('上市櫃產業合併營收報表', href='/industry_revenue', active="exact")),
+                        dbc.NavItem(dbc.NavLink('最新營收公告', href='/latest_revenue', active="exact")),
+                        dbc.NavItem(dbc.NavLink('預估次月營收', href='/predict_revenue', active="exact")),
+                        dbc.NavItem(dbc.NavLink('台股分群表現', href='/ml_cluster', active="exact"))
+                        ],
+                    vertical='md',
+                    pills=True
+                    )
             ],
             style={
                 'padding':'2rem 3rem',
                 'width': '25%',
-                # 'display': 'flex',
-                # 'flex-direction': 'column',
+                'display': 'flex',
+                'flex-direction': 'column',
                 'backgroundColor': '#ededed'
             }
         ),

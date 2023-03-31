@@ -59,7 +59,7 @@ side_panel_layout = html.Div(
         html.Div(children=minor_title), 
         html.Div(id="minor-dropdown", children=minor_dropdown),
         html.H5("輸入股號或公司名稱查詢", style={"font-size": "1rem", "letter-spacing": "0.1rem", "color": "#787878", "text-align": "center"}),
-        html.Div(dcc.Input(placeholder="輸入...", id='st_input', type='text', style={"color":"black", "font-size":"12px", "width":"20rem", "height":"2rem"})),
+        html.Div(dcc.Input(placeholder="輸入...", id='st_input', type='text', style={"color":"black", "font-size":"15px", "width":"20rem", "height":"2rem"})),
         html.Br(),
         html.Div(
             html.Button("送出查詢",
@@ -118,18 +118,56 @@ table = html.Div([
 ], style={'width':'100%', 'overflowX': 'scroll'})
 
 
+rank_col = ['代號', '名稱', 'rev_period', '營收(百萬)', 'yoy％', 'mom％', '預估次月yoy％','預估次月mom％']
+revenue_rank = html.Div([
+    html.P("同產業個股營收狀況", 
+           id='rank_title',
+           style={
+               "font-size": "1.2rem", 
+               "letter-spacing": "0.1rem", 
+               "color": "black", 
+               "text-align": "left"
+               }
+           ),
+    html.Div(
+        dash_table.DataTable(
+            id='rank_rev_table',
+            columns=[{"name": i, "id": i} for i in (rank_col)],
+            page_current=0,
+            page_size=10,
+            sort_action="native",
+            style_cell={
+                'font_size': '16px',
+                'overflow':'hidden',
+                'textOverflow':'ellipsis',
+                'color':'black',
+            },
+            style_cell_conditional=[
+                {
+                    'if': {'column_id': 'Year'},
+                    'textAlign': 'left'
+                }
+            ],
+        ),
+        className="dbc-row-selectable",
+    )
+], style={'width':'100%', 'overflowX': 'scroll'})
+    
+
+
+
 main_panel_layout = html.Div(
     id="panel-upper-lower",
     children=[
-        # rank,
+        revenue_rank,
         html.Br(), 
-        table,
-        html.Br(),
         html.Div([
             dcc.Graph(id='graph_rev'),
             dcc.Graph(id='graph_mom'),
             dcc.Graph(id='graph_yoy')
-        ], style={"flex-direction": "row"})
+        ], style={"flex-direction": "row"}),
+        html.Br(),
+        table        
     ],
 )
 
@@ -156,7 +194,9 @@ callback
      Output("graph_rev", "figure"),
      Output("graph_mom", "figure"),
      Output("graph_yoy", "figure"),
-     Output("rev_search_title", "children")
+     Output("rev_search_title", "children"),
+     Output('rank_rev_table', 'data'), 
+     Output('rank_title','children')
      ],
     [Input('submit', 'n_clicks'),
      State("new-dropdown-component", "value"),
@@ -165,7 +205,7 @@ callback
     prevent_initial_call=True
 )
 def update_table(submit, dropdown1, dropdown2, st_input):
-    if (st_input == ' ') or (st_input == '') or (st_input == '輸入...'):
+    if (st_input == ' ') or (st_input == '') or (st_input == '輸入...')or (st_input == None):
         try:
             if dropdown1 != exchange_industry_name[0]:
                 mask = industry[industry['交易所產業分類'] == dropdown1].st_code.astype(str)
@@ -199,7 +239,10 @@ def update_table(submit, dropdown1, dropdown2, st_input):
             data_predict.year = data_predict.year.astype(str) + str(' 預估值')
             table = pd.concat([table, data_predict.tail(12).pivot_table(index='year', columns='month', values='rev').reset_index()],axis=0)
             table = table.rename({'year':'年份'}, axis=1).to_dict('records')
-            return table, REV, MOM, YOY,(title + ' 各年度月營收')
+            latest_company['代號'] = latest_company['代號'].astype('int')
+            predict_company = predict_company.rename({'yoy％':'預估次月yoy％', 'mom％':'預估次月mom％'}, axis=1).drop(['rev_period', '營收(百萬)'], axis=1)
+            
+            return table, REV, MOM, YOY,(title + ' 各年度月營收'), pd.merge(latest_company, predict_company, on=['代號','名稱']).to_dict('records'), (title + ' 同產業個股營收狀況')
         
         except KeyError:
             print("跳警示通知：該分類沒有相關個股，請重新選擇，並reset")
@@ -210,9 +253,11 @@ def update_table(submit, dropdown1, dropdown2, st_input):
             if (st_input.isdigit() == True):
                 st_group = industry[industry.st_code.astype(str) == st_input]['交易所產業分類'].values[0]
                 mask = industry[industry['交易所產業分類'] == st_group].st_code.astype(str)
+                data = db[db.st_code == st_input]
             else:
                 st_group = industry[industry.st_name.astype(str) == st_input]['交易所產業分類'].values[0]
                 mask = industry[industry['交易所產業分類'] == st_group].st_code.astype(str)
+                data = db[db.st_name == st_input]
                 
             # 產業個股最新營收狀況
             latest_company = db[db.st_code.isin(mask)].drop_duplicates('st_code', keep='last')
@@ -223,7 +268,6 @@ def update_table(submit, dropdown1, dropdown2, st_input):
             predict_company = predict[predict['代號'].isin(mask.astype(int))]
 
             # 搜尋個股資訊
-            data = db[db.st_code == st_input]
             data_predict = fn.get_month_rev_predict_for_nxt_year_industry(data)
                 
             # 繪圖
@@ -237,7 +281,9 @@ def update_table(submit, dropdown1, dropdown2, st_input):
             data_predict.year = data_predict.year.astype(str) + str(' 預估值')
             table = pd.concat([table, data_predict.tail(12).pivot_table(index='year', columns='month', values='rev').reset_index()],axis=0)
             table = table.rename({'year':'年份'}, axis=1).to_dict('records')
-            return table, REV, MOM, YOY,(title + ' 各年度月營收')
+            latest_company['代號'] = latest_company['代號'].astype('int')
+            predict_company = predict_company.rename({'yoy％':'預估次月yoy％', 'mom％':'預估次月mom％'}, axis=1).drop(['rev_period', '營收(百萬)'], axis=1)    
+            return table, REV, MOM, YOY,(title + ' 各年度月營收'), pd.merge(latest_company, predict_company, on=['代號','名稱']).to_dict('records'), (title + ' 同' + st_group + '產業個股營收狀況')
         
         except IndexError:
             print('跳警示通知：查無該股票營收，請重新輸入，並reset')
