@@ -109,7 +109,11 @@ print('完成讀function', datetime.datetime.now())
 """
 整理營收worksheet
 """
-update = pd.read_excel('/Users/yuchun/Revenue/tej_revenue_update.xlsm', 
+# update = pd.read_excel('/Users/yuchun/Revenue/tej_revenue_update.xlsm', 
+#                        sheet_name='工作表2', 
+#                        usecols=[3, 4, 5, 6, 7, 8], 
+#                        header=6)
+update = pd.read_excel('C:/Users/皓崴實習生計畫/Desktop/REV/tej_revenue_update.xlsm', 
                        sheet_name='工作表2', 
                        usecols=[3, 4, 5, 6, 7, 8], 
                        header=6)
@@ -133,7 +137,9 @@ latest = latest.rename({'【2】營收發布日':'營收發布日',
                        }, axis=1).sort_values('yoy％', ascending=False)
 latest_period = update.rev_period.head(1).values[0]
 # latest_filename = latest_period + '最新營收公布.csv'
-latest.to_csv('/Users/yuchun/Revenue/Web2/models/最新營收公布.csv',
+# latest.to_csv('/Users/yuchun/Revenue/Web2/models/最新營收公布.csv',
+#               encoding='utf_8_sig', header=True, index=False)
+latest.to_csv('C:/Users/皓崴實習生計畫/Desktop/REV/Web2/models/最新營收公布.csv',
               encoding='utf_8_sig', header=True, index=False)
 # 完成最新營收更新csv
 print('完成最新營收更新csv', datetime.datetime.now())
@@ -158,7 +164,7 @@ else:
     update.to_sql('tej_revenue', engine, if_exists='append')
     predict_nxt_month = pd.concat([db, update], axis=0)
 
-predict_nxt_month.to_pickle('/Users/yuchun/Revenue/Web2/models/營收db.pkl')
+predict_nxt_month.to_pickle('C:/Users/皓崴實習生計畫/Desktop/REV/Web2/models/營收db.pkl')
 print('完成上傳新增的營收資訊', datetime.datetime.now())
 
 
@@ -174,7 +180,7 @@ predict_nxt_month = predict_nxt_month.groupby('st_code', as_index=False).apply(g
 predict_nxt_month = predict_nxt_month[predict_order].reset_index(drop=True)
 predict_nxt_month = predict_nxt_month.rename({'st_code':'代號', 'st_name':'名稱', 'rev':'營收(百萬)'}, axis=1)
 # predict_nxt_month_filename = predict_nxt_month.rev_period.head(1).values[0][2:] + '營收預估.csv'
-predict_nxt_month.to_csv('/Users/yuchun/Revenue/Web2/models/營收預估.csv',
+predict_nxt_month.to_csv('C:/Users/皓崴實習生計畫/Desktop/REV/Web2/models/營收預估.csv',
                          encoding='utf_8_sig', 
                          header=True, 
                          index=False)
